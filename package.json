@@ -1,0 +1,19 @@
+{
+  "name": "financial-advisor",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "api": "npm run start:dev --workspace=apps/api",
+    "mobile": "npx expo start --project-directory apps/mobile",
+    "db:migrate": "npm run prisma:migrate --workspace=apps/api",
+    "db:studio": "npm run prisma:studio --workspace=apps/api",
+    "build:shared": "npm run build --workspace=packages/shared"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}
