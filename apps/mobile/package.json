@@ -22,8 +22,8 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
-    "@types/react": "~18.3.0",
-    "typescript": "~5.8.0"
+    "@types/react": "~19.1.10",
+    "typescript": "~5.9.2"
   },
   "private": true
 }
