@@ -1,0 +1,121 @@
+// =============================================================================
+// Prisma Schema — Mini Personal Finance Advisor
+// DB: PostgreSQL | ORM: Prisma 7
+//
+// Note: DATABASE_URL is configured in prisma.config.ts (Prisma 7 convention).
+// Sprint 2: enable pgvector extension + TransactionEmbedding model for RAG.
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7: connection URL lives in prisma.config.ts, not here
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum AuthProvider {
+  LOCAL  // email + password (default)
+  GOOGLE // OAuth — Sprint 2
+  APPLE  // OAuth — Sprint 2 (App Store required)
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+/// Must stay in sync with TransactionCategory in @financial-advisor/shared
+enum TransactionCategory {
+  Food
+  Transport
+  Bills
+  Entertainment
+  Shopping
+  Health
+  Income
+  Other
+}
+
+enum ChallengeStatus {
+  ACTIVE
+  COMPLETED
+  FAILED
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String       @id @default(uuid())
+  email        String       @unique
+  /// Null for OAuth users (GOOGLE / APPLE) who have no password
+  passwordHash String?
+  name         String?
+  authProvider AuthProvider @default(LOCAL)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  transactions Transaction[]
+  goals        Goal[]
+  challenges   Challenge[]
+
+  @@index([email])
+}
+
+model Transaction {
+  id           String              @id @default(uuid())
+  userId       String
+  description  String
+  amount       Float
+  type         TransactionType
+  category     TransactionCategory
+  /// 0–1 confidence from AI categoriser; null if user manually set category
+  aiConfidence Float?
+  date         DateTime            @default(now())
+  createdAt    DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, date])
+  @@index([userId, category])
+}
+
+model Goal {
+  id               String    @id @default(uuid())
+  userId           String
+  description      String
+  targetAmount     Float
+  deadline         DateTime?
+  /// Cached AI recommendation — regenerated on goal update
+  aiRecommendation String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Challenge {
+  id          String          @id @default(uuid())
+  userId      String
+  /// AI-generated text e.g. "Spend less than $50 on dining out this week."
+  description String
+  weekStart   DateTime
+  weekEnd     DateTime
+  status      ChallengeStatus @default(ACTIVE)
+  createdAt   DateTime        @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, weekStart])
+}
