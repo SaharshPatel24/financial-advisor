@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
+import { UsersService } from './users.service';
 
-// TODO(Issue #5): UsersService (findByEmail, create) used by AuthModule
-@Module({})
+@Module({
+  providers: [UsersService],
+  exports: [UsersService],
+})
 export class UsersModule {}
