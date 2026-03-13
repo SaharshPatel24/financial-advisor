@@ -6,7 +6,20 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "jest"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "setupFiles": [
+      "./jest.setup.js"
+    ],
+    "transformIgnorePatterns": [
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg)"
+    ],
+    "moduleNameMapper": {
+      "^@financial-advisor/shared$": "<rootDir>/../../packages/shared/src/index.ts"
+    }
   },
   "dependencies": {
     "@react-navigation/bottom-tabs": "^7.15.5",
@@ -22,7 +35,10 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@testing-library/react-native": "^13.3.3",
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.1.10",
+    "jest-expo": "^55.0.9",
     "typescript": "~5.9.2"
   },
   "private": true
