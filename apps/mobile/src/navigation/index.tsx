@@ -1,7 +1,12 @@
 import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+
+import { useAuthStore } from '../store/authStore';
+import { colors, spacing, typography } from '../theme';
+import { strings } from '../content/strings';
 
 import LoginScreen from '../screens/Auth/LoginScreen';
 import RegisterScreen from '../screens/Auth/RegisterScreen';
@@ -10,36 +15,153 @@ import TransactionsScreen from '../screens/Transactions/TransactionsScreen';
 import GoalsScreen from '../screens/Goals/GoalsScreen';
 import ChallengeScreen from '../screens/Challenge/ChallengeScreen';
 
-const AuthStack = createNativeStackNavigator();
-const AppTabs = createBottomTabNavigator();
+import type { AuthStackParamList, AppTabParamList } from './types';
 
+// ---------------------------------------------------------------------------
+// Stack + Tab instances
+// ---------------------------------------------------------------------------
+const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+const AppTabs   = createBottomTabNavigator<AppTabParamList>();
+
+// ---------------------------------------------------------------------------
+// Tab bar icon — emoji-based, zero extra dependencies.
+// Swap the emoji prop for a vector icon component later with no other changes.
+// ---------------------------------------------------------------------------
+type TabIconProps = { icon: string; label: string; focused: boolean };
+
+function TabIcon({ icon, label, focused }: TabIconProps) {
+  return (
+    <View style={styles.tabIconContainer}>
+      <Text style={[styles.tabEmoji, focused && styles.tabEmojiActive]}>
+        {icon}
+      </Text>
+      <Text
+        style={[
+          styles.tabLabel,
+          focused ? styles.tabLabelActive : styles.tabLabelInactive,
+        ]}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Auth navigator
+// ---------------------------------------------------------------------------
 function AuthNavigator() {
   return (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-      <AuthStack.Screen name="Login" component={LoginScreen} />
+      <AuthStack.Screen name="Login"    component={LoginScreen} />
       <AuthStack.Screen name="Register" component={RegisterScreen} />
     </AuthStack.Navigator>
   );
 }
 
+// ---------------------------------------------------------------------------
+// App tab navigator
+// ---------------------------------------------------------------------------
 function AppNavigator() {
   return (
-    <AppTabs.Navigator>
-      <AppTabs.Screen name="Dashboard" component={DashboardScreen} />
-      <AppTabs.Screen name="Transactions" component={TransactionsScreen} />
-      <AppTabs.Screen name="Goals" component={GoalsScreen} />
-      <AppTabs.Screen name="Challenge" component={ChallengeScreen} />
+    <AppTabs.Navigator
+      screenOptions={{
+        headerShown:    false,
+        tabBarShowLabel: false,
+        tabBarStyle:    styles.tabBar,
+      }}
+    >
+      <AppTabs.Screen
+        name="Dashboard"
+        component={DashboardScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="🏠" label={strings.tabs.dashboard} focused={focused} />
+          ),
+        }}
+      />
+      <AppTabs.Screen
+        name="Transactions"
+        component={TransactionsScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="💳" label={strings.tabs.transactions} focused={focused} />
+          ),
+        }}
+      />
+      <AppTabs.Screen
+        name="Goals"
+        component={GoalsScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="🎯" label={strings.tabs.goals} focused={focused} />
+          ),
+        }}
+      />
+      <AppTabs.Screen
+        name="Challenge"
+        component={ChallengeScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="🏆" label={strings.tabs.challenge} focused={focused} />
+          ),
+        }}
+      />
     </AppTabs.Navigator>
   );
 }
 
-// TODO(Issue #12): Replace with useAuthStore().isAuthenticated from Zustand
-const isLoggedIn = false;
-
+// ---------------------------------------------------------------------------
+// Root navigator — switches stacks reactively via Zustand auth state
+// ---------------------------------------------------------------------------
 export default function RootNavigator() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
   return (
     <NavigationContainer>
-      {isLoggedIn ? <AppNavigator /> : <AuthNavigator />}
+      {isAuthenticated ? <AppNavigator /> : <AuthNavigator />}
     </NavigationContainer>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
+const styles = StyleSheet.create({
+  tabBar: {
+    backgroundColor: colors.surface,
+    borderTopColor:  colors.border,
+    borderTopWidth:  1,
+    height:          72,
+    paddingBottom:   spacing['2'],
+    paddingTop:      spacing['1'],
+    elevation:       8,
+    shadowColor:     colors.textPrimary,
+    shadowOffset:    { width: 0, height: -2 },
+    shadowOpacity:   0.06,
+    shadowRadius:    8,
+  },
+  tabIconContainer: {
+    alignItems:     'center',
+    justifyContent: 'center',
+    gap:            2,
+  },
+  tabEmoji: {
+    fontSize: 22,
+    opacity:  0.4,
+  },
+  tabEmojiActive: {
+    opacity: 1,
+  },
+  tabLabel: {
+    fontSize:   typography.size.xs,
+    fontWeight: typography.weight.medium,
+  },
+  tabLabelActive: {
+    color:      colors.primary,
+    fontWeight: typography.weight.semibold,
+  },
+  tabLabelInactive: {
+    color: colors.textMuted,
+  },
+});
