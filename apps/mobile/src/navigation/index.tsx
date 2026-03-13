@@ -12,15 +12,17 @@ import LoginScreen from '../screens/Auth/LoginScreen';
 import RegisterScreen from '../screens/Auth/RegisterScreen';
 import DashboardScreen from '../screens/Dashboard/DashboardScreen';
 import TransactionsScreen from '../screens/Transactions/TransactionsScreen';
+import AddTransactionScreen from '../screens/Transactions/AddTransactionScreen';
 import GoalsScreen from '../screens/Goals/GoalsScreen';
 import ChallengeScreen from '../screens/Challenge/ChallengeScreen';
 
-import type { AuthStackParamList, AppTabParamList } from './types';
+import type { AuthStackParamList, AppTabParamList, AppStackParamList } from './types';
 
 // ---------------------------------------------------------------------------
 // Stack + Tab instances
 // ---------------------------------------------------------------------------
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+const AppStack  = createNativeStackNavigator<AppStackParamList>();
 const AppTabs   = createBottomTabNavigator<AppTabParamList>();
 
 // ---------------------------------------------------------------------------
@@ -112,6 +114,22 @@ function AppNavigator() {
 }
 
 // ---------------------------------------------------------------------------
+// App root stack — tabs + modal screens (e.g. AddTransaction)
+// ---------------------------------------------------------------------------
+function AppRootNavigator() {
+  return (
+    <AppStack.Navigator screenOptions={{ headerShown: false }}>
+      <AppStack.Screen name="AppTabs" component={AppNavigator} />
+      <AppStack.Screen
+        name="AddTransaction"
+        component={AddTransactionScreen}
+        options={{ presentation: 'modal' }}
+      />
+    </AppStack.Navigator>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Root navigator — switches stacks reactively via Zustand auth state
 // ---------------------------------------------------------------------------
 export default function RootNavigator() {
@@ -119,7 +137,7 @@ export default function RootNavigator() {
 
   return (
     <NavigationContainer>
-      {isAuthenticated ? <AppNavigator /> : <AuthNavigator />}
+      {isAuthenticated ? <AppRootNavigator /> : <AuthNavigator />}
     </NavigationContainer>
   );
 }

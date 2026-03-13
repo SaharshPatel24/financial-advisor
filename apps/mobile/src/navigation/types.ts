@@ -20,7 +20,16 @@ export type AppTabParamList = {
 };
 
 // ---------------------------------------------------------------------------
+// Root app stack — wraps tabs + modal screens
+// ---------------------------------------------------------------------------
+export type AppStackParamList = {
+  AppTabs:        undefined;
+  AddTransaction: undefined;
+};
+
+// ---------------------------------------------------------------------------
 // Typed navigation props — import these in screens instead of casting
 // ---------------------------------------------------------------------------
-export type AuthNavProp    = NativeStackNavigationProp<AuthStackParamList>;
-export type AppTabNavProp  = BottomTabNavigationProp<AppTabParamList>;
+export type AuthNavProp     = NativeStackNavigationProp<AuthStackParamList>;
+export type AppTabNavProp   = BottomTabNavigationProp<AppTabParamList>;
+export type AppStackNavProp = NativeStackNavigationProp<AppStackParamList>;
