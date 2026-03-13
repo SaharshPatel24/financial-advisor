@@ -1,5 +1,11 @@
 import { Module } from '@nestjs/common';
+import { AiModule } from '../ai/ai.module';
+import { InsightsController } from './insights.controller';
+import { InsightsService } from './insights.service';
 
-// TODO(Issue #9): InsightsController + InsightsService with AI text generation
-@Module({})
+@Module({
+  imports: [AiModule],
+  controllers: [InsightsController],
+  providers: [InsightsService],
+})
 export class InsightsModule {}
