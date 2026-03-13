@@ -1,5 +1,11 @@
 import { Module } from '@nestjs/common';
+import { AiModule } from '../ai/ai.module';
+import { ChallengesController } from './challenges.controller';
+import { ChallengesService } from './challenges.service';
 
-// TODO(Issue #11): ChallengesController + ChallengesService with AI challenge generation
-@Module({})
+@Module({
+  imports: [AiModule],
+  controllers: [ChallengesController],
+  providers: [ChallengesService],
+})
 export class ChallengesModule {}
