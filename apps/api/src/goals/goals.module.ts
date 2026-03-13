@@ -1,5 +1,11 @@
 import { Module } from '@nestjs/common';
+import { AiModule } from '../ai/ai.module';
+import { GoalsController } from './goals.controller';
+import { GoalsService } from './goals.service';
 
-// TODO(Issue #10): GoalsController + GoalsService with AI recommendation generation
-@Module({})
+@Module({
+  imports: [AiModule],
+  controllers: [GoalsController],
+  providers: [GoalsService],
+})
 export class GoalsModule {}
