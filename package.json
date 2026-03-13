@@ -7,11 +7,20 @@
     "packages/*"
   ],
   "scripts": {
-    "api": "npm run start:dev --workspace=apps/api",
-    "mobile": "npx expo start --project-directory apps/mobile",
-    "db:migrate": "npm run prisma:migrate --workspace=apps/api",
-    "db:studio": "npm run prisma:studio --workspace=apps/api",
-    "build:shared": "npm run build --workspace=packages/shared"
+    "api": "npm run start:dev -w apps/api",
+    "api:prod": "npm run start:prod -w apps/api",
+    "mobile": "npm run start -w mobile",
+    "mobile:tunnel": "npm run start -w mobile -- --tunnel",
+    "mobile:android": "npm run android -w mobile",
+    "mobile:ios": "npm run ios -w mobile",
+    "test": "npm run test -w apps/api && npm run test -w mobile",
+    "test:api": "npm run test -w apps/api",
+    "test:mobile": "npm run test -w mobile",
+    "db:migrate": "cd apps/api && npx prisma migrate dev",
+    "db:migrate:prod": "cd apps/api && npx prisma migrate deploy",
+    "db:studio": "cd apps/api && npx prisma studio",
+    "db:generate": "cd apps/api && npx prisma generate",
+    "build:shared": "npm run build -w packages/shared"
   },
   "devDependencies": {
     "typescript": "^5.8.2"

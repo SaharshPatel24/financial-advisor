@@ -1,11 +1,35 @@
 import axios from 'axios';
+import Constants from 'expo-constants';
 import type { AuthTokens } from '@financial-advisor/shared';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api';
+/**
+ * Resolve the API base URL for any run environment:
+ *   - Set EXPO_PUBLIC_API_URL in .env to override explicitly (production, tunnels, etc.)
+ *   - Otherwise, derive from the Expo/Metro dev-server host so it works on:
+ *       • iOS Simulator   → localhost
+ *       • Android Emulator → LAN IP that Metro is already using
+ *       • Physical device  → LAN IP that Metro is already using
+ */
+function resolveApiUrl(): string {
+  const envUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (envUrl) return envUrl;
+
+  // hostUri is e.g. "192.168.1.5:8081" or "localhost:8081"
+  const hostUri = Constants.expoConfig?.hostUri ?? (Constants as any).manifest?.debuggerHost;
+  if (hostUri) {
+    const host = hostUri.split(':')[0];
+    return `http://${host}:3000/api`;
+  }
+
+  return 'http://localhost:3000/api';
+}
+
+const API_URL = resolveApiUrl();
 
 const api = axios.create({
   baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
+  timeout: 10000, // 10 s — prevents infinite loading when server is unreachable
 });
 
 // ---------------------------------------------------------------------------
