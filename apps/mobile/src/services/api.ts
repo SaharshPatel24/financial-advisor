@@ -12,13 +12,31 @@ import type { AuthTokens } from '@financial-advisor/shared';
  */
 function resolveApiUrl(): string {
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (envUrl) return envUrl;
 
-  // hostUri is e.g. "192.168.1.5:8081" or "localhost:8081"
+  // Explicit env var wins — use it when it's a real external URL (tunnel, prod, etc.)
+  // Skip localhost/127.0.0.1 — those only work on the Mac itself, not on devices.
+  if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+    if (__DEV__) console.log('[api] using env URL:', envUrl);
+    return envUrl;
+  }
+
+  // Auto-detect the Mac's LAN IP from Metro's hostUri.
+  // Skip *.exp.direct — that's Expo's own tunnel, not the API host.
   const hostUri = Constants.expoConfig?.hostUri ?? (Constants as any).manifest?.debuggerHost;
-  if (hostUri) {
-    const host = hostUri.split(':')[0];
-    return `http://${host}:3000/api`;
+  if (hostUri && !hostUri.includes('.exp.direct')) {
+    const host = hostUri.split(':')[0]; // e.g. "192.168.1.5" from "192.168.1.5:8081"
+    const url = `http://${host}:3000/api`;
+    if (__DEV__) console.log('[api] auto-detected LAN URL:', url);
+    return url;
+  }
+
+  // Expo tunnel mode and no env var set — log a clear warning.
+  if (__DEV__) {
+    console.warn(
+      '[api] Using Expo tunnel but EXPO_PUBLIC_API_URL is not set.\n' +
+      'Run: npx localtunnel --port 3000\n' +
+      'Then set EXPO_PUBLIC_API_URL=https://<your-lt-url>/api in apps/mobile/.env',
+    );
   }
 
   return 'http://localhost:3000/api';
