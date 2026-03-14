@@ -26,13 +26,14 @@ jobs:
       - name: Build shared package
         run: npm run build:shared
 
-      - name: Generate Prisma client
-        run: npm run db:generate
-        env:
-          DATABASE_URL: ${{ github.ref == 'refs/heads/main' && secrets.DATABASE_URL_PROD || github.ref == 'refs/heads/staging' && secrets.DATABASE_URL_STAGING || secrets.DATABASE_URL_DEV }}
-
       - name: Build API
         run: npm run build -w apps/api
+
+      - name: Generate Prisma client
+        working-directory: apps/api
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ github.ref == 'refs/heads/main' && secrets.DATABASE_URL_PROD || github.ref == 'refs/heads/staging' && secrets.DATABASE_URL_STAGING || secrets.DATABASE_URL_DEV }}
 
       - name: Run Prisma migrations
         working-directory: apps/api
