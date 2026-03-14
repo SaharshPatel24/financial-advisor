@@ -35,42 +35,28 @@ jobs:
         run: npm run build -w apps/api
 
       - name: Run Prisma migrations
-        run: cd apps/api && npx prisma migrate deploy
+        working-directory: apps/api
+        run: npx prisma migrate deploy
         env:
           DATABASE_URL: ${{ github.ref == 'refs/heads/main' && secrets.DATABASE_URL_PROD || github.ref == 'refs/heads/staging' && secrets.DATABASE_URL_STAGING || secrets.DATABASE_URL_DEV }}
 
-      # ── Production (main) ─────────────────────────────────────────────────
-      - name: Deploy to Vercel (production)
-        if: github.ref == 'refs/heads/main'
-        run: |
-          cd apps/api
-          npx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-          npx vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-          npx vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Pull Vercel environment
+        working-directory: apps/api
+        run: npx vercel pull --yes --environment=${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }} --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_PROD }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
-      # ── Staging ───────────────────────────────────────────────────────────
-      - name: Deploy to Vercel (staging)
-        if: github.ref == 'refs/heads/staging'
-        run: |
-          cd apps/api
-          npx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-          npx vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-          npx vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Build for Vercel
+        working-directory: apps/api
+        run: npx vercel build ${{ github.ref == 'refs/heads/main' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_STAGING }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
-      # ── Development (dev) ─────────────────────────────────────────────────
-      - name: Deploy to Vercel (dev)
-        if: github.ref == 'refs/heads/dev'
-        run: |
-          cd apps/api
-          npx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-          npx vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-          npx vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy to Vercel
+        working-directory: apps/api
+        run: npx vercel deploy --prebuilt ${{ github.ref == 'refs/heads/main' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_DEV }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
