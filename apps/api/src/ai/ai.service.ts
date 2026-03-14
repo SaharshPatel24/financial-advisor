@@ -64,11 +64,11 @@ Return a confidence score between 0 and 1.`,
         },
       ],
       output_config: {
-        format: zodOutputFormat(CategorizationSchema, 'categorization'),
+        format: zodOutputFormat(CategorizationSchema),
       },
     });
 
-    return response.parsed_output;
+    return response.parsed_output!;
   }
 
   async generateInsights(
