@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "installCommand": "npm ci && npm run build:shared && npm run build -w apps/api",
+  "builds": [
+    {
+      "src": "apps/api/dist/lambda.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "apps/api/dist/lambda.js"
+    }
+  ]
+}
