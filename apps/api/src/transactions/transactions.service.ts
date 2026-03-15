@@ -16,7 +16,10 @@ export class TransactionsService {
     private readonly ai: AiService,
   ) {}
 
-  async create(userId: string, dto: CreateTransactionDto): Promise<Transaction> {
+  async create(
+    userId: string,
+    dto: CreateTransactionDto,
+  ): Promise<Transaction> {
     let category = dto.category;
     let aiConfidence: number | null = null;
 
@@ -30,7 +33,7 @@ export class TransactionsService {
         category = result.category;
         aiConfidence = result.confidence;
       } catch {
-        category = 'Uncategorized';
+        category = 'Other';
       }
     }
 
