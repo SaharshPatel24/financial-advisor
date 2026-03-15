@@ -91,6 +91,25 @@ describe('TransactionsService', () => {
       expect(result).toEqual(mockTransaction);
     });
 
+    it('should fall back to Uncategorized when AI throws', async () => {
+      mockAi.categorizeTransaction.mockRejectedValue(new Error('AI unavailable'));
+      mockPrisma.transaction.create.mockResolvedValue({
+        ...mockTransaction,
+        category: 'Uncategorized',
+        aiConfidence: null,
+      });
+
+      await service.create('user-1', {
+        description: 'Coffee',
+        amount: 5,
+        type: 'EXPENSE',
+      });
+
+      expect(mockPrisma.transaction.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ category: 'Uncategorized', aiConfidence: null }),
+      });
+    });
+
     it('should skip AI when category is provided', async () => {
       mockPrisma.transaction.create.mockResolvedValue({
         ...mockTransaction,
