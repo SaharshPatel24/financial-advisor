@@ -20,9 +20,18 @@
     "db:migrate:prod": "cd apps/api && npx prisma migrate deploy",
     "db:studio": "cd apps/api && npx prisma studio",
     "db:generate": "cd apps/api && npx prisma generate",
-    "build:shared": "npm run build -w packages/shared"
+    "build:shared": "npm run build -w packages/shared",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "prettier --write"
+    ]
   },
   "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.1",
     "typescript": "^5.8.2"
   }
 }

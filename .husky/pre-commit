@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# Check package-lock.json is in sync with package.json
+npm ci --dry-run 2>/dev/null || {
+  echo ""
+  echo "❌ package-lock.json is out of sync with package.json."
+  echo "   Run 'npm install' to update the lock file, then re-stage it."
+  echo ""
+  exit 1
+}
+
+# Run lint-staged (prettier format check + auto-fix on staged files)
+npx lint-staged
