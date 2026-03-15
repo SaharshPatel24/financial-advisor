@@ -6,8 +6,10 @@ on:
     paths:
       - 'apps/api/**'
       - 'packages/shared/**'
+      - 'package-lock.json'
       - '.github/workflows/deploy-api.yml'
       - 'vercel.json'
+  workflow_dispatch:
 
 jobs:
   deploy:
