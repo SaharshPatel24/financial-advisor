@@ -1,42 +1,44 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { useAuthStore } from '../store/authStore';
-import { colors } from '../theme';
+import { colors, spacing, typography } from '../theme';
+import { strings } from '../content/strings';
 
-import LoginScreen          from '../screens/Auth/LoginScreen';
-import RegisterScreen       from '../screens/Auth/RegisterScreen';
-import DashboardScreen      from '../screens/Dashboard/DashboardScreen';
-import TransactionsScreen   from '../screens/Transactions/TransactionsScreen';
+import LoginScreen from '../screens/Auth/LoginScreen';
+import RegisterScreen from '../screens/Auth/RegisterScreen';
+import DashboardScreen from '../screens/Dashboard/DashboardScreen';
+import TransactionsScreen from '../screens/Transactions/TransactionsScreen';
 import AddTransactionScreen from '../screens/Transactions/AddTransactionScreen';
-import GoalsScreen          from '../screens/Goals/GoalsScreen';
-import ChallengeScreen      from '../screens/Challenge/ChallengeScreen';
+import GoalsScreen from '../screens/Goals/GoalsScreen';
+import ChallengeScreen from '../screens/Challenge/ChallengeScreen';
 
 import type { AuthStackParamList, AppTabParamList, AppStackParamList } from './types';
 
+// ---------------------------------------------------------------------------
+// Stack + Tab instances
+// ---------------------------------------------------------------------------
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
-const AppStack  = createNativeStackNavigator<AppStackParamList>();
-const AppTabs   = createBottomTabNavigator<AppTabParamList>();
+const AppStack = createNativeStackNavigator<AppStackParamList>();
+const AppTabs = createBottomTabNavigator<AppTabParamList>();
 
 // ---------------------------------------------------------------------------
-// Tab icon — Ionicons + label
+// Tab bar icon — emoji-based, zero extra dependencies.
+// Swap the emoji prop for a vector icon component later with no other changes.
 // ---------------------------------------------------------------------------
-type TabIconProps = {
-  name: React.ComponentProps<typeof Ionicons>['name'];
-  focused: boolean;
-};
+type TabIconProps = { icon: string; label: string; focused: boolean };
 
-function TabIcon({ name, focused }: TabIconProps) {
+function TabIcon({ icon, label, focused }: TabIconProps) {
   return (
-    <Ionicons
-      name={name}
-      size={30}
-      color={focused ? colors.primary : colors.textSecondary}
-    />
+    <View style={styles.tabIconContainer}>
+      <Text style={[styles.tabEmoji, focused && styles.tabEmojiActive]}>{icon}</Text>
+      <Text style={[styles.tabLabel, focused ? styles.tabLabelActive : styles.tabLabelInactive]}>
+        {label}
+      </Text>
+    </View>
   );
 }
 
@@ -46,7 +48,7 @@ function TabIcon({ name, focused }: TabIconProps) {
 function AuthNavigator() {
   return (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-      <AuthStack.Screen name="Login"    component={LoginScreen} />
+      <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="Register" component={RegisterScreen} />
     </AuthStack.Navigator>
   );
@@ -59,11 +61,9 @@ function AppNavigator() {
   return (
     <AppTabs.Navigator
       screenOptions={{
-        headerShown:     false,
+        headerShown: false,
         tabBarShowLabel: false,
-        tabBarStyle:     styles.tabBar,
-        tabBarItemStyle: styles.tabBarItem,
-        sceneStyle:      { backgroundColor: colors.background },
+        tabBarStyle: styles.tabBar,
       }}
     >
       <AppTabs.Screen
@@ -71,7 +71,7 @@ function AppNavigator() {
         component={DashboardScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon name={focused ? 'home' : 'home-outline'} focused={focused} />
+            <TabIcon icon="🏠" label={strings.tabs.dashboard} focused={focused} />
           ),
         }}
       />
@@ -80,7 +80,7 @@ function AppNavigator() {
         component={TransactionsScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon name={focused ? 'card' : 'card-outline'} focused={focused} />
+            <TabIcon icon="💳" label={strings.tabs.transactions} focused={focused} />
           ),
         }}
       />
@@ -89,7 +89,7 @@ function AppNavigator() {
         component={GoalsScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon name={focused ? 'flag' : 'flag-outline'} focused={focused} />
+            <TabIcon icon="🎯" label={strings.tabs.goals} focused={focused} />
           ),
         }}
       />
@@ -98,7 +98,7 @@ function AppNavigator() {
         component={ChallengeScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon name={focused ? 'trophy' : 'trophy-outline'} focused={focused} />
+            <TabIcon icon="🏆" label={strings.tabs.challenge} focused={focused} />
           ),
         }}
       />
@@ -107,7 +107,7 @@ function AppNavigator() {
 }
 
 // ---------------------------------------------------------------------------
-// Root app stack — tabs + modals
+// App root stack — tabs + modal screens (e.g. AddTransaction)
 // ---------------------------------------------------------------------------
 function AppRootNavigator() {
   return (
@@ -116,17 +116,18 @@ function AppRootNavigator() {
       <AppStack.Screen
         name="AddTransaction"
         component={AddTransactionScreen}
-        options={{ presentation: 'transparentModal' }}
+        options={{ presentation: 'modal' }}
       />
     </AppStack.Navigator>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Root navigator
+// Root navigator — switches stacks reactively via Zustand auth state
 // ---------------------------------------------------------------------------
 export default function RootNavigator() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
   return (
     <NavigationContainer>
       {isAuthenticated ? <AppRootNavigator /> : <AuthNavigator />}
@@ -139,21 +140,39 @@ export default function RootNavigator() {
 // ---------------------------------------------------------------------------
 const styles = StyleSheet.create({
   tabBar: {
-    position:       'absolute',
     backgroundColor: colors.surface,
-    borderTopWidth:  1,
-    borderTopColor:  colors.border,
-    height:          78,
-    elevation:       8,
-    shadowColor:     '#0f172a',
-    shadowOffset:    { width: 0, height: -2 },
-    shadowOpacity:   0.06,
-    shadowRadius:    8,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    height: 72,
+    paddingBottom: spacing['2'],
+    paddingTop: spacing['1'],
+    elevation: 8,
+    shadowColor: colors.textPrimary,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
   },
-  tabBarItem: {
-    paddingTop:     15,
-    flex:           1,
-    alignItems:     'center',
+  tabIconContainer: {
+    alignItems: 'center',
     justifyContent: 'center',
+    gap: 2,
+  },
+  tabEmoji: {
+    fontSize: 22,
+    opacity: 0.4,
+  },
+  tabEmojiActive: {
+    opacity: 1,
+  },
+  tabLabel: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.medium,
+  },
+  tabLabelActive: {
+    color: colors.primary,
+    fontWeight: typography.weight.semibold,
+  },
+  tabLabelInactive: {
+    color: colors.textMuted,
   },
 });
