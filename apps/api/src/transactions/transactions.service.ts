@@ -21,13 +21,17 @@ export class TransactionsService {
     let aiConfidence: number | null = null;
 
     if (!category) {
-      const result = await this.ai.categorizeTransaction(
-        dto.description,
-        dto.amount,
-        dto.type,
-      );
-      category = result.category;
-      aiConfidence = result.confidence;
+      try {
+        const result = await this.ai.categorizeTransaction(
+          dto.description,
+          dto.amount,
+          dto.type,
+        );
+        category = result.category;
+        aiConfidence = result.confidence;
+      } catch {
+        category = 'Uncategorized';
+      }
     }
 
     return this.prisma.transaction.create({
