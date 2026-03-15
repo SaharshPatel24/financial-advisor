@@ -1,53 +1,42 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { useAuthStore } from '../store/authStore';
-import { colors, spacing, typography, radius } from '../theme';
-import { strings } from '../content/strings';
+import { colors } from '../theme';
 
-import LoginScreen from '../screens/Auth/LoginScreen';
-import RegisterScreen from '../screens/Auth/RegisterScreen';
-import DashboardScreen from '../screens/Dashboard/DashboardScreen';
-import TransactionsScreen from '../screens/Transactions/TransactionsScreen';
+import LoginScreen          from '../screens/Auth/LoginScreen';
+import RegisterScreen       from '../screens/Auth/RegisterScreen';
+import DashboardScreen      from '../screens/Dashboard/DashboardScreen';
+import TransactionsScreen   from '../screens/Transactions/TransactionsScreen';
 import AddTransactionScreen from '../screens/Transactions/AddTransactionScreen';
-import GoalsScreen from '../screens/Goals/GoalsScreen';
-import ChallengeScreen from '../screens/Challenge/ChallengeScreen';
+import GoalsScreen          from '../screens/Goals/GoalsScreen';
+import ChallengeScreen      from '../screens/Challenge/ChallengeScreen';
 
 import type { AuthStackParamList, AppTabParamList, AppStackParamList } from './types';
 
-// ---------------------------------------------------------------------------
-// Stack + Tab instances
-// ---------------------------------------------------------------------------
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStack = createNativeStackNavigator<AppStackParamList>();
 const AppTabs = createBottomTabNavigator<AppTabParamList>();
 
 // ---------------------------------------------------------------------------
-// Tab bar icon — emoji-based, zero extra dependencies.
-// Swap the emoji prop for a vector icon component later with no other changes.
+// Tab icon — Ionicons + label
 // ---------------------------------------------------------------------------
-type TabIconProps = { icon: string; label: string; focused: boolean };
+type TabIconProps = {
+  name: React.ComponentProps<typeof Ionicons>['name'];
+  focused: boolean;
+};
 
-function TabIcon({ icon, label, focused }: TabIconProps) {
+function TabIcon({ name, focused }: TabIconProps) {
   return (
-    <View style={styles.tabIconContainer}>
-      <View style={[styles.tabIconPill, focused && styles.tabIconPillActive]}>
-        <Text style={[styles.tabEmoji, focused && styles.tabEmojiActive]}>
-          {icon}
-        </Text>
-      </View>
-      <Text
-        style={[
-          styles.tabLabel,
-          focused ? styles.tabLabelActive : styles.tabLabelInactive,
-        ]}
-      >
-        {label}
-      </Text>
-    </View>
+    <Ionicons
+      name={name}
+      size={30}
+      color={focused ? colors.primary : colors.textSecondary}
+    />
   );
 }
 
@@ -73,6 +62,7 @@ function AppNavigator() {
         headerShown:     false,
         tabBarShowLabel: false,
         tabBarStyle:     styles.tabBar,
+        tabBarItemStyle: styles.tabBarItem,
         sceneStyle:      { backgroundColor: colors.background },
       }}
     >
@@ -81,7 +71,7 @@ function AppNavigator() {
         component={DashboardScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="🏠" label={strings.tabs.dashboard} focused={focused} />
+            <TabIcon name={focused ? 'home' : 'home-outline'} focused={focused} />
           ),
         }}
       />
@@ -90,7 +80,7 @@ function AppNavigator() {
         component={TransactionsScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="💳" label={strings.tabs.transactions} focused={focused} />
+            <TabIcon name={focused ? 'card' : 'card-outline'} focused={focused} />
           ),
         }}
       />
@@ -99,7 +89,7 @@ function AppNavigator() {
         component={GoalsScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="🎯" label={strings.tabs.goals} focused={focused} />
+            <TabIcon name={focused ? 'flag' : 'flag-outline'} focused={focused} />
           ),
         }}
       />
@@ -108,7 +98,7 @@ function AppNavigator() {
         component={ChallengeScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="🏆" label={strings.tabs.challenge} focused={focused} />
+            <TabIcon name={focused ? 'trophy' : 'trophy-outline'} focused={focused} />
           ),
         }}
       />
@@ -117,7 +107,7 @@ function AppNavigator() {
 }
 
 // ---------------------------------------------------------------------------
-// App root stack — tabs + modal screens (e.g. AddTransaction)
+// Root app stack — tabs + modals
 // ---------------------------------------------------------------------------
 function AppRootNavigator() {
   return (
@@ -126,18 +116,17 @@ function AppRootNavigator() {
       <AppStack.Screen
         name="AddTransaction"
         component={AddTransactionScreen}
-        options={{ presentation: 'modal' }}
+        options={{ presentation: 'transparentModal' }}
       />
     </AppStack.Navigator>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Root navigator — switches stacks reactively via Zustand auth state
+// Root navigator
 // ---------------------------------------------------------------------------
 export default function RootNavigator() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-
   return (
     <NavigationContainer>
       {isAuthenticated ? <AppRootNavigator /> : <AuthNavigator />}
@@ -150,57 +139,21 @@ export default function RootNavigator() {
 // ---------------------------------------------------------------------------
 const styles = StyleSheet.create({
   tabBar: {
-    position:        'absolute',
-    bottom:          spacing['5'],
-    left:            spacing['6'],
-    right:           spacing['6'],
+    position:       'absolute',
     backgroundColor: colors.surface,
-    borderRadius:    36,
-    borderTopWidth:  0,
-    height:          60,
-    paddingBottom:   0,
-    paddingTop:      0,
-    paddingHorizontal: spacing['2'],
-    elevation:       12,
-    shadowColor:     colors.textPrimary,
-    shadowOffset:    { width: 0, height: 4 },
-    shadowOpacity:   0.12,
-    shadowRadius:    16,
-    overflow:        'hidden',
+    borderTopWidth:  1,
+    borderTopColor:  colors.border,
+    height:          78,
+    elevation:       8,
+    shadowColor:     '#0f172a',
+    shadowOffset:    { width: 0, height: -2 },
+    shadowOpacity:   0.06,
+    shadowRadius:    8,
   },
-  tabIconContainer: {
+  tabBarItem: {
+    paddingTop:     15,
     flex:           1,
     alignItems:     'center',
     justifyContent: 'center',
-    gap:            2,
-  },
-  tabIconPill: {
-    width:           40,
-    height:          28,
-    borderRadius:    14,
-    alignItems:      'center',
-    justifyContent:  'center',
-    backgroundColor: 'transparent',
-  },
-  tabIconPillActive: {
-    backgroundColor: colors.primarySubtle,
-  },
-  tabEmoji: {
-    fontSize: 20,
-    opacity:  0.4,
-  },
-  tabEmojiActive: {
-    opacity: 1,
-  },
-  tabLabel: {
-    fontSize: typography.size.xs,
-    fontWeight: typography.weight.medium,
-  },
-  tabLabelActive: {
-    color: colors.primary,
-    fontWeight: typography.weight.semibold,
-  },
-  tabLabelInactive: {
-    color: colors.textMuted,
   },
 });

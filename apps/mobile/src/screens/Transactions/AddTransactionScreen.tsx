@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../../theme';
 import { strings } from '../../content/strings';
 import { useTransactionStore } from '../../store/transactionStore';
@@ -57,187 +58,288 @@ export default function AddTransactionScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.flex}
+      style={styles.overlay}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text style={styles.title}>{strings.addTransaction.title}</Text>
+      {/* Tap outside to dismiss */}
+      <TouchableOpacity style={styles.backdrop} onPress={() => navigation.goBack()} activeOpacity={1} />
 
-        {/* Description */}
-        <Text style={styles.label}>{strings.addTransaction.descriptionLabel}</Text>
-        <TextInput
-          style={styles.input}
-          placeholder={strings.addTransaction.descriptionPlaceholder}
-          placeholderTextColor={colors.textMuted}
-          value={description}
-          onChangeText={setDescription}
-          returnKeyType="next"
-        />
+      {/* Bottom sheet */}
+      <View style={styles.sheet}>
+        {/* Drag handle */}
+        <View style={styles.handle} />
 
-        {/* Amount */}
-        <Text style={styles.label}>{strings.addTransaction.amountLabel}</Text>
-        <TextInput
-          style={styles.input}
-          placeholder={strings.addTransaction.amountPlaceholder}
-          placeholderTextColor={colors.textMuted}
-          value={amount}
-          onChangeText={setAmount}
-          keyboardType="decimal-pad"
-          returnKeyType="done"
-        />
-
-        {/* Type toggle */}
-        <Text style={styles.label}>{strings.addTransaction.typeLabel}</Text>
-        <View style={styles.toggle}>
-          {(['EXPENSE', 'INCOME'] as TransactionType[]).map((t) => (
-            <TouchableOpacity
-              key={t}
-              style={[styles.toggleOption, type === t && styles.toggleActive]}
-              onPress={() => setType(t)}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.toggleText, type === t && styles.toggleTextActive]}>
-                {t === 'INCOME' ? strings.addTransaction.typeIncome : strings.addTransaction.typeExpense}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        {/* Sheet header */}
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>{strings.addTransaction.title}</Text>
+          <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="close" size={14} color={colors.textSecondary} />
+          </TouchableOpacity>
         </View>
 
-        {/* AI category badge */}
-        {aiCategory ? (
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryLabel}>{strings.addTransaction.categoryLabel}: </Text>
-            <Text style={styles.categoryValue}>{aiCategory}</Text>
-          </View>
-        ) : null}
-
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleSubmit}
-          disabled={loading}
-          activeOpacity={0.8}
+        <ScrollView
+          contentContainerStyle={styles.body}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          {loading
-            ? <ActivityIndicator color={colors.textInverse} />
-            : <Text style={styles.buttonText}>{strings.addTransaction.submitButton}</Text>
-          }
-        </TouchableOpacity>
+          {/* Type toggle */}
+          <View style={styles.typeToggle}>
+            <TouchableOpacity
+              style={[styles.typeOption, type === 'INCOME' && styles.typeIncome]}
+              onPress={() => setType('INCOME')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.typeText, type === 'INCOME' && styles.typeIncomeText]}>
+                {strings.addTransaction.typeIncome}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.typeOption, type === 'EXPENSE' && styles.typeExpense]}
+              onPress={() => setType('EXPENSE')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.typeText, type === 'EXPENSE' && styles.typeExpenseText]}>
+                {strings.addTransaction.typeExpense}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-        <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.cancelText}>{strings.common.cancel}</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          {/* Description */}
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>{strings.addTransaction.descriptionLabel}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder={strings.addTransaction.descriptionPlaceholder}
+              placeholderTextColor={colors.textMuted}
+              value={description}
+              onChangeText={setDescription}
+              returnKeyType="next"
+            />
+          </View>
+
+          {/* Amount */}
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>{strings.addTransaction.amountLabel}</Text>
+            <View style={styles.amountRow}>
+              <Text style={styles.currencySign}>$</Text>
+              <TextInput
+                style={styles.amountInput}
+                placeholder="0.00"
+                placeholderTextColor={colors.textMuted}
+                value={amount}
+                onChangeText={setAmount}
+                keyboardType="decimal-pad"
+                returnKeyType="done"
+              />
+            </View>
+          </View>
+
+          {/* AI category result */}
+          {aiCategory ? (
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>{strings.addTransaction.categoryLabel}</Text>
+              <View style={styles.aiBadge}>
+                <View style={styles.aiIconWrap}>
+                  <Ionicons name="sparkles" size={11} color={colors.textInverse} />
+                </View>
+                <View>
+                  <Text style={styles.aiDetected}>AI detected</Text>
+                  <Text style={styles.aiValue}>{aiCategory}</Text>
+                </View>
+              </View>
+            </View>
+          ) : null}
+
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+          <TouchableOpacity
+            style={[styles.saveBtn, loading && styles.saveBtnDisabled]}
+            onPress={handleSubmit}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            {loading
+              ? <ActivityIndicator color={colors.textInverse} />
+              : <Text style={styles.saveBtnText}>{strings.addTransaction.submitButton}</Text>
+            }
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
+  overlay: {
     flex:            1,
-    backgroundColor: colors.background,
+    justifyContent:  'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.32)',
   },
-  scroll: {
-    flexGrow: 1,
-    padding:  spacing['6'],
+  backdrop: {
+    flex: 1,
   },
-  title: {
-    fontSize:     typography.size.xl,
-    fontWeight:   typography.weight.bold,
-    color:        colors.textPrimary,
-    marginBottom: spacing['6'],
+  sheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius:  radius.xl,
+    borderTopRightRadius: radius.xl,
+    maxHeight:       '85%',
   },
-  label: {
-    fontSize:     typography.size.sm,
+  handle: {
+    width:           34,
+    height:          4,
+    backgroundColor: colors.border,
+    borderRadius:    radius.full,
+    marginTop:       spacing['2'] + 2,
+    marginBottom:    0,
+    alignSelf:       'center',
+  },
+  sheetHeader: {
+    flexDirection:   'row',
+    justifyContent:  'space-between',
+    alignItems:      'center',
+    paddingHorizontal: spacing['4'],
+    paddingVertical: spacing['3'],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  sheetTitle: {
+    fontSize:   15,
+    fontWeight: typography.weight.bold,
+    color:      colors.textPrimary,
+  },
+  closeBtn: {
+    width:           26,
+    height:          26,
+    borderRadius:    13,
+    backgroundColor: colors.surfaceAlt,
+    alignItems:      'center',
+    justifyContent:  'center',
+  },
+  body: {
+    padding: spacing['4'],
+  },
+  typeToggle: {
+    flexDirection:   'row',
+    backgroundColor: colors.surfaceAlt,
+    borderRadius:    11,
+    padding:         3,
+    marginBottom:    spacing['4'] - 2,
+  },
+  typeOption: {
+    flex:            1,
+    paddingVertical: 7,
+    alignItems:      'center',
+    borderRadius:    9,
+  },
+  typeIncome: {
+    backgroundColor: colors.surface,
+    borderWidth:     1.5,
+    borderColor:     '#bbf7d0',
+  },
+  typeExpense: {
+    backgroundColor: colors.surface,
+    borderWidth:     1.5,
+    borderColor:     '#fecaca',
+  },
+  typeText: {
+    fontSize:   12,
+    fontWeight: typography.weight.semibold,
+    color:      colors.textMuted,
+  },
+  typeIncomeText: {
+    color: colors.success,
+  },
+  typeExpenseText: {
+    color: colors.danger,
+  },
+  field: {
+    marginBottom: spacing['3'],
+  },
+  fieldLabel: {
+    fontSize:     11,
     fontWeight:   typography.weight.medium,
     color:        colors.textPrimary,
-    marginBottom: spacing['1'],
+    marginBottom: 4,
   },
   input: {
-    backgroundColor:   colors.surfaceAlt,
-    borderWidth:       1,
-    borderColor:       colors.border,
-    borderRadius:      radius.md,
-    paddingHorizontal: spacing['4'],
-    paddingVertical:   spacing['3'],
-    fontSize:          typography.size.base,
-    color:             colors.textPrimary,
-    marginBottom:      spacing['4'],
+    backgroundColor: colors.background,
+    borderWidth:     1.5,
+    borderColor:     colors.border,
+    borderRadius:    radius.md - 2,
+    paddingHorizontal: spacing['3'],
+    paddingVertical: spacing['2'] + 2,
+    fontSize:        13,
+    color:           colors.textPrimary,
   },
-  toggle: {
-    flexDirection:  'row',
-    borderWidth:    1,
-    borderColor:    colors.border,
-    borderRadius:   radius.md,
-    overflow:       'hidden',
-    marginBottom:   spacing['6'],
-  },
-  toggleOption: {
-    flex:            1,
-    paddingVertical: spacing['3'],
-    alignItems:      'center',
-    backgroundColor: colors.surfaceAlt,
-  },
-  toggleActive: {
-    backgroundColor: colors.primary,
-  },
-  toggleText: {
-    fontSize:   typography.size.sm,
-    fontWeight: typography.weight.medium,
-    color:      colors.textSecondary,
-  },
-  toggleTextActive: {
-    color: colors.textInverse,
-  },
-  categoryBadge: {
+  amountRow: {
     flexDirection:   'row',
     alignItems:      'center',
-    backgroundColor: colors.surface,
-    borderRadius:    radius.md,
-    padding:         spacing['3'],
-    marginBottom:    spacing['4'],
-    borderWidth:     1,
-    borderColor:     colors.border,
+    backgroundColor: colors.background,
+    borderWidth:     1.5,
+    borderColor:     colors.primary,
+    borderRadius:    radius.md - 2,
+    paddingHorizontal: spacing['3'],
+    paddingVertical: spacing['2'] + 2,
+    gap:             4,
   },
-  categoryLabel: {
-    fontSize: typography.size.sm,
-    color:    colors.textSecondary,
-  },
-  categoryValue: {
-    fontSize:   typography.size.sm,
+  currencySign: {
+    fontSize:   17,
     fontWeight: typography.weight.semibold,
     color:      colors.primary,
   },
-  error: {
+  amountInput: {
+    flex:     1,
+    fontSize: 22,
+    fontWeight: typography.weight.bold,
+    color:    colors.textPrimary,
+    padding:  0,
+  },
+  aiBadge: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    gap:             spacing['2'],
+    backgroundColor: '#eef2ff',
+    borderWidth:     1.5,
+    borderColor:     '#c7d2fe',
+    borderRadius:    radius.md - 2,
+    padding:         9,
+  },
+  aiIconWrap: {
+    width:           20,
+    height:          20,
+    borderRadius:    6,
+    backgroundColor: colors.primary,
+    alignItems:      'center',
+    justifyContent:  'center',
+    flexShrink:      0,
+  },
+  aiDetected: {
+    fontSize: 10,
+    color:    '#818cf8',
+  },
+  aiValue: {
+    fontSize:   12,
+    fontWeight: typography.weight.semibold,
+    color:      '#3730a3',
+  },
+  errorText: {
     fontSize:     typography.size.sm,
     color:        colors.danger,
     marginBottom: spacing['3'],
   },
-  button: {
+  saveBtn: {
     backgroundColor: colors.primary,
     borderRadius:    radius.md,
-    paddingVertical: spacing['4'],
+    paddingVertical: spacing['3'] + 1,
     alignItems:      'center',
-    marginBottom:    spacing['3'],
+    marginTop:       spacing['2'],
   },
-  buttonDisabled: {
+  saveBtnDisabled: {
     opacity: 0.6,
   },
-  buttonText: {
+  saveBtnText: {
     color:      colors.textInverse,
     fontSize:   typography.size.base,
     fontWeight: typography.weight.semibold,
-  },
-  cancelButton: {
-    alignItems: 'center',
-    paddingVertical: spacing['2'],
-  },
-  cancelText: {
-    fontSize: typography.size.sm,
-    color:    colors.textSecondary,
   },
 });
