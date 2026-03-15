@@ -34,8 +34,17 @@ type TabIconProps = { icon: string; label: string; focused: boolean };
 function TabIcon({ icon, label, focused }: TabIconProps) {
   return (
     <View style={styles.tabIconContainer}>
-      <Text style={[styles.tabEmoji, focused && styles.tabEmojiActive]}>{icon}</Text>
-      <Text style={[styles.tabLabel, focused ? styles.tabLabelActive : styles.tabLabelInactive]}>
+      <View style={[styles.tabIconPill, focused && styles.tabIconPillActive]}>
+        <Text style={[styles.tabEmoji, focused && styles.tabEmojiActive]}>
+          {icon}
+        </Text>
+      </View>
+      <Text
+        style={[
+          styles.tabLabel,
+          focused ? styles.tabLabelActive : styles.tabLabelInactive,
+        ]}
+      >
         {label}
       </Text>
     </View>
@@ -61,10 +70,10 @@ function AppNavigator() {
   return (
     <AppTabs.Navigator
       screenOptions={{
-        headerShown:        false,
-        tabBarShowLabel:    false,
-        tabBarStyle:        styles.tabBar,
-        sceneStyle:         { backgroundColor: colors.background },
+        headerShown:     false,
+        tabBarShowLabel: false,
+        tabBarStyle:     styles.tabBar,
+        sceneStyle:      { backgroundColor: colors.background },
       }}
     >
       <AppTabs.Screen
@@ -165,9 +174,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap:            2,
   },
+  tabIconPill: {
+    width:           40,
+    height:          28,
+    borderRadius:    14,
+    alignItems:      'center',
+    justifyContent:  'center',
+    backgroundColor: 'transparent',
+  },
+  tabIconPillActive: {
+    backgroundColor: colors.primarySubtle,
+  },
   tabEmoji: {
-    fontSize: 22,
-    opacity:  0.35,
+    fontSize: 20,
+    opacity:  0.4,
   },
   tabEmojiActive: {
     opacity: 1,
