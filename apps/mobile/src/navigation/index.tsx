@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { useAuthStore } from '../store/authStore';
-import { colors, spacing, typography } from '../theme';
+import { colors, spacing, typography, radius } from '../theme';
 import { strings } from '../content/strings';
 
 import LoginScreen from '../screens/Auth/LoginScreen';
@@ -68,9 +68,10 @@ function AppNavigator() {
   return (
     <AppTabs.Navigator
       screenOptions={{
-        headerShown:    false,
-        tabBarShowLabel: false,
-        tabBarStyle:    styles.tabBar,
+        headerShown:        false,
+        tabBarShowLabel:    false,
+        tabBarStyle:        styles.tabBar,
+        sceneStyle:         { backgroundColor: colors.background },
       }}
     >
       <AppTabs.Screen
@@ -147,26 +148,31 @@ export default function RootNavigator() {
 // ---------------------------------------------------------------------------
 const styles = StyleSheet.create({
   tabBar: {
+    position:        'absolute',
+    bottom:          spacing['5'],
+    left:            spacing['5'],
+    right:           spacing['5'],
     backgroundColor: colors.surface,
-    borderTopColor:  colors.border,
-    borderTopWidth:  1,
-    height:          72,
-    paddingBottom:   spacing['2'],
-    paddingTop:      spacing['1'],
-    elevation:       8,
+    borderRadius:    radius.full,
+    borderTopWidth:  0,
+    height:          68,
+    paddingBottom:   0,
+    paddingTop:      0,
+    elevation:       12,
     shadowColor:     colors.textPrimary,
-    shadowOffset:    { width: 0, height: -2 },
-    shadowOpacity:   0.06,
-    shadowRadius:    8,
+    shadowOffset:    { width: 0, height: 4 },
+    shadowOpacity:   0.12,
+    shadowRadius:    16,
   },
   tabIconContainer: {
+    flex:           1,
     alignItems:     'center',
     justifyContent: 'center',
-    gap:            2,
+    gap:            3,
   },
   tabEmoji: {
     fontSize: 22,
-    opacity:  0.4,
+    opacity:  0.35,
   },
   tabEmojiActive: {
     opacity: 1,
