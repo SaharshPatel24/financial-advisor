@@ -30,6 +30,23 @@ jobs:
         env:
           DATABASE_URL: ${{ github.ref == 'refs/heads/main' && secrets.DATABASE_URL_PROD || github.ref == 'refs/heads/staging' && secrets.DATABASE_URL_STAGING || secrets.DATABASE_URL_DEV }}
 
+      - name: Build shared package
+        run: npm run build:shared
+
+      - name: Build API
+        run: npm run build -w apps/api
+
+      - name: Bundle with ncc
+        working-directory: apps/api
+        run: npx @vercel/ncc build dist/src/lambda.js -o .vercel/output/functions/index.func
+
+      - name: Create Vercel output config
+        working-directory: apps/api
+        run: |
+          mkdir -p .vercel/output
+          echo '{"version":3,"routes":[{"src":"^/(.*)$","dest":"/index"}]}' > .vercel/output/config.json
+          echo '{"runtime":"nodejs22.x","handler":"index.js","launcherId":"node"}' > .vercel/output/functions/index.func/.vc-config.json
+
       - name: Run Prisma migrations
         working-directory: apps/api
         run: npx prisma migrate deploy
@@ -37,13 +54,15 @@ jobs:
           DATABASE_URL: ${{ github.ref == 'refs/heads/main' && secrets.DATABASE_URL_PROD || github.ref == 'refs/heads/staging' && secrets.DATABASE_URL_STAGING || secrets.DATABASE_URL_DEV }}
 
       - name: Pull Vercel environment
+        working-directory: apps/api
         run: npx vercel pull --yes --environment=${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }} --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Deploy to Vercel
-        run: npx vercel deploy ${{ github.ref == 'refs/heads/main' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: apps/api
+        run: npx vercel deploy --prebuilt ${{ github.ref == 'refs/heads/main' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
