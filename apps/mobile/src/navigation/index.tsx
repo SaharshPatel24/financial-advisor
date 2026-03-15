@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { useAuthStore } from '../store/authStore';
-import { colors, spacing, typography } from '../theme';
+import { colors, spacing, typography, radius } from '../theme';
 import { strings } from '../content/strings';
 
 import LoginScreen from '../screens/Auth/LoginScreen';
@@ -34,9 +34,11 @@ type TabIconProps = { icon: string; label: string; focused: boolean };
 function TabIcon({ icon, label, focused }: TabIconProps) {
   return (
     <View style={styles.tabIconContainer}>
-      <Text style={[styles.tabEmoji, focused && styles.tabEmojiActive]}>
-        {icon}
-      </Text>
+      <View style={[styles.tabIconPill, focused && styles.tabIconPillActive]}>
+        <Text style={[styles.tabEmoji, focused && styles.tabEmojiActive]}>
+          {icon}
+        </Text>
+      </View>
       <Text
         style={[
           styles.tabLabel,
@@ -68,9 +70,10 @@ function AppNavigator() {
   return (
     <AppTabs.Navigator
       screenOptions={{
-        headerShown:    false,
+        headerShown:     false,
         tabBarShowLabel: false,
-        tabBarStyle:    styles.tabBar,
+        tabBarStyle:     styles.tabBar,
+        sceneStyle:      { backgroundColor: colors.background },
       }}
     >
       <AppTabs.Screen
@@ -147,25 +150,43 @@ export default function RootNavigator() {
 // ---------------------------------------------------------------------------
 const styles = StyleSheet.create({
   tabBar: {
+    position:        'absolute',
+    bottom:          spacing['5'],
+    left:            spacing['6'],
+    right:           spacing['6'],
     backgroundColor: colors.surface,
-    borderTopColor:  colors.border,
-    borderTopWidth:  1,
-    height:          72,
-    paddingBottom:   spacing['2'],
-    paddingTop:      spacing['1'],
-    elevation:       8,
+    borderRadius:    36,
+    borderTopWidth:  0,
+    height:          60,
+    paddingBottom:   0,
+    paddingTop:      0,
+    paddingHorizontal: spacing['2'],
+    elevation:       12,
     shadowColor:     colors.textPrimary,
-    shadowOffset:    { width: 0, height: -2 },
-    shadowOpacity:   0.06,
-    shadowRadius:    8,
+    shadowOffset:    { width: 0, height: 4 },
+    shadowOpacity:   0.12,
+    shadowRadius:    16,
+    overflow:        'hidden',
   },
   tabIconContainer: {
+    flex:           1,
     alignItems:     'center',
     justifyContent: 'center',
     gap:            2,
   },
+  tabIconPill: {
+    width:           40,
+    height:          28,
+    borderRadius:    14,
+    alignItems:      'center',
+    justifyContent:  'center',
+    backgroundColor: 'transparent',
+  },
+  tabIconPillActive: {
+    backgroundColor: colors.primarySubtle,
+  },
   tabEmoji: {
-    fontSize: 22,
+    fontSize: 20,
     opacity:  0.4,
   },
   tabEmojiActive: {
