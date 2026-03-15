@@ -45,7 +45,7 @@ jobs:
         run: |
           mkdir -p .vercel/output
           echo '{"version":3,"routes":[{"src":"^/(.*)$","dest":"/index"}]}' > .vercel/output/config.json
-          echo '{"runtime":"nodejs22.x","handler":"index.js","launcherId":"node"}' > .vercel/output/functions/index.func/.vc-config.json
+          echo '{"runtime":"nodejs20.x","handler":"index.js","launcherId":"node"}' > .vercel/output/functions/index.func/.vc-config.json
 
       - name: Run Prisma migrations
         working-directory: apps/api
