@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fina — Mobile Prototype</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#f1f5f9;display:flex;flex-direction:column;align-items:center;padding:32px 16px 48px;font-family:-apple-system,'SF Pro Display','Helvetica Neue',sans-serif;}
+h1{font-size:22px;font-weight:700;color:#0f172a;margin-bottom:4px;letter-spacing:-0.5px;}
+p{font-size:13px;color:#64748b;margin-bottom:24px;}
+.snav{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:640px;margin-bottom:28px;}
+.nb{padding:5px 13px;border-radius:999px;border:1.5px solid #e2e8f0;background:#fff;font-size:11px;font-weight:500;color:#64748b;cursor:pointer;transition:all 0.15s;}
+.nb:hover{border-color:#6366f1;color:#6366f1;}
+.nb.on{background:#6366f1;border-color:#6366f1;color:#fff;}
+.phone{width:300px;background:#f8fafc;border-radius:44px;border:9px solid #1c1c1e;overflow:hidden;position:relative;height:628px;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,0.22),0 8px 24px rgba(0,0,0,0.12);}
+.di{width:118px;height:30px;background:#1c1c1e;border-radius:20px;position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:10;}
+.sb{height:52px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 20px 6px;flex-shrink:0;z-index:5;position:relative;}
+.st{font-size:15px;font-weight:600;color:#0f172a;letter-spacing:-0.3px;}
+.si{display:flex;align-items:center;gap:6px;}
+.scr{flex:1;overflow:hidden;display:none;flex-direction:column;}
+.scr.on{display:flex;}
+.tabbar{height:70px;background:#fff;border-top:1px solid #e2e8f0;display:flex;align-items:flex-start;justify-content:space-around;padding:10px 4px 0;flex-shrink:0;}
+.ti{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;cursor:pointer;}
+.tl{font-size:10px;color:#94a3b8;}
+.ti.on .tl{color:#6366f1;font-weight:600;}
+.sc{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;}
+.sc::-webkit-scrollbar{display:none;}
+.auth-bg{flex:1;background:#f8fafc;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 18px 28px;overflow-y:auto;}
+.alogo{width:52px;height:52px;background:#6366f1;border-radius:15px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;}
+.aname{font-size:26px;font-weight:700;color:#6366f1;letter-spacing:-0.8px;margin-bottom:3px;}
+.atag{font-size:11px;color:#94a3b8;margin-bottom:20px;}
+.acard{background:#fff;border-radius:20px;padding:18px;width:100%;border:1px solid #e2e8f0;box-shadow:0 4px 20px rgba(0,0,0,0.06);}
+.act{font-size:17px;font-weight:700;color:#0f172a;margin-bottom:2px;}
+.acs{font-size:11px;color:#64748b;margin-bottom:14px;}
+.fl{font-size:11px;font-weight:500;color:#334155;margin-bottom:4px;}
+.fi{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 12px;font-size:12px;color:#94a3b8;margin-bottom:10px;}
+.fi.v{color:#0f172a;border-color:#6366f1;background:#fafafa;}
+.bp{background:#6366f1;border-radius:12px;padding:12px;text-align:center;color:#fff;font-size:13px;font-weight:600;margin-top:2px;}
+.blr{display:flex;justify-content:center;align-items:center;gap:4px;margin-top:12px;}
+.blr span{font-size:11px;color:#64748b;}
+.blr a{font-size:11px;color:#6366f1;font-weight:600;text-decoration:none;}
+.dh{padding:8px 16px 10px;background:#fff;border-bottom:1px solid #e2e8f0;}
+.dgr{display:flex;justify-content:space-between;align-items:center;}
+.dgt{font-size:19px;font-weight:700;color:#0f172a;}
+.ddt{font-size:11px;color:#94a3b8;margin-top:1px;}
+.av{width:34px;height:34px;border-radius:50%;background:#eef2ff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#4f46e5;}
+.db{padding:12px 14px;}
+.bc{background:#6366f1;border-radius:16px;padding:14px;margin-bottom:12px;}
+.bcl{font-size:10px;color:rgba(255,255,255,0.7);margin-bottom:3px;}
+.bca{font-size:26px;font-weight:700;color:#fff;letter-spacing:-0.5px;margin-bottom:10px;}
+.brow{display:flex;gap:10px;}
+.bst{flex:1;background:rgba(255,255,255,0.18);border-radius:10px;padding:7px 9px;}
+.bsl{font-size:10px;color:rgba(255,255,255,0.7);margin-bottom:2px;}
+.bsv{font-size:13px;font-weight:700;color:#fff;}
+.sh{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.stt{font-size:13px;font-weight:700;color:#0f172a;}
+.slk{font-size:11px;color:#6366f1;font-weight:500;}
+.cw{background:#fff;border:1px solid #e2e8f0;border-radius:13px;padding:12px;margin-bottom:12px;}
+.ct{font-size:11px;font-weight:600;color:#0f172a;margin-bottom:8px;}
+.cbars{display:flex;align-items:flex-end;gap:5px;height:56px;}
+.cbw{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end;}
+.cb{width:100%;border-radius:3px 3px 0 0;background:#e0e7ff;}
+.cb.ca{background:#6366f1;}
+.cbl{font-size:9px;color:#94a3b8;}
+.ic{background:#eef2ff;border-radius:12px;padding:11px;display:flex;gap:9px;margin-bottom:12px;align-items:flex-start;}
+.ii{width:26px;height:26px;background:#6366f1;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.it{font-size:10px;font-weight:600;color:#3730a3;margin-bottom:2px;}
+.ix{font-size:10px;color:#4f46e5;line-height:1.4;}
+.tr{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid #f1f5f9;}
+.tr:last-child{border-bottom:none;}
+.tiw{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tn{font-size:12px;font-weight:500;color:#0f172a;}
+.ttm{font-size:10px;color:#94a3b8;margin-top:1px;}
+.ta{font-size:12px;font-weight:600;}
+.ta.n{color:#ef4444;}.ta.p{color:#10b981;}
+.txtp{background:#fff;padding:10px 16px 8px;border-bottom:1px solid #e2e8f0;}
+.txpt{font-size:21px;font-weight:700;color:#0f172a;margin-bottom:8px;}
+.fr{display:flex;gap:5px;}
+.fc{padding:4px 11px;border-radius:999px;border:1.5px solid #e2e8f0;background:#fff;font-size:10px;font-weight:500;color:#64748b;}
+.fc.on{background:#6366f1;border-color:#6366f1;color:#fff;}
+.tgl{font-size:10px;font-weight:600;color:#94a3b8;padding:8px 16px 3px;letter-spacing:0.3px;}
+.txrw{display:flex;align-items:center;gap:9px;padding:9px 16px;background:#fff;border-bottom:1px solid #f8fafc;}
+.cb2{font-size:9px;font-weight:500;padding:2px 7px;border-radius:999px;margin-top:3px;display:inline-block;}
+.fab{position:absolute;bottom:78px;right:16px;width:46px;height:46px;background:#6366f1;border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:20;box-shadow:0 4px 16px rgba(99,102,241,0.4);}
+.mh{width:34px;height:4px;background:#e2e8f0;border-radius:999px;margin:10px auto 0;}
+.mhd{padding:12px 16px 10px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;}
+.mtt{font-size:15px;font-weight:700;color:#0f172a;}
+.mcl{width:26px;height:26px;background:#f1f5f9;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.mb{padding:14px 16px;overflow-y:auto;flex:1;}
+.ttog{display:flex;background:#f1f5f9;border-radius:11px;padding:3px;margin-bottom:14px;}
+.to{flex:1;text-align:center;padding:7px;border-radius:9px;font-size:12px;font-weight:600;}
+.to.ea{background:#fff;color:#ef4444;border:1.5px solid #fecaca;}
+.to.ii2{color:#94a3b8;}
+.mfl{font-size:11px;font-weight:500;color:#334155;margin-bottom:4px;}
+.mfi{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 12px;font-size:13px;color:#0f172a;}
+.aipl{display:flex;align-items:center;gap:8px;background:#eef2ff;border:1.5px solid #c7d2fe;border-radius:10px;padding:9px 12px;}
+.ais{width:20px;height:20px;background:#6366f1;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.aicl{font-size:10px;color:#818cf8;}
+.aicv{font-size:12px;font-weight:600;color:#3730a3;}
+.amtr{display:flex;align-items:center;background:#f8fafc;border:1.5px solid #6366f1;border-radius:10px;padding:10px 12px;gap:4px;}
+.amc{font-size:17px;font-weight:600;color:#6366f1;}
+.amv{font-size:22px;font-weight:700;color:#0f172a;letter-spacing:-0.5px;}
+.gtp{background:#fff;padding:10px 16px 12px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;}
+.gpt{font-size:21px;font-weight:700;color:#0f172a;}
+.bag{background:#6366f1;border-radius:9px;padding:6px 11px;font-size:11px;font-weight:600;color:#fff;}
+.gc{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:13px;margin-bottom:10px;}
+.gch{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:9px;}
+.gn{font-size:13px;font-weight:700;color:#0f172a;}
+.gd{font-size:10px;color:#94a3b8;margin-top:1px;}
+.gp{font-size:15px;font-weight:700;color:#6366f1;}
+.pt{height:6px;background:#f1f5f9;border-radius:999px;overflow:hidden;margin-bottom:7px;}
+.pf{height:100%;border-radius:999px;background:#6366f1;}
+.gam{display:flex;justify-content:space-between;}
+.gs{font-size:11px;font-weight:600;color:#0f172a;}
+.gt{font-size:11px;color:#94a3b8;}
+.arc{background:#ecfdf5;border-radius:12px;padding:11px 13px;margin-bottom:10px;}
+.art{font-size:10px;font-weight:600;color:#065f46;margin-bottom:3px;display:flex;align-items:center;gap:4px;}
+.arx{font-size:11px;color:#047857;line-height:1.4;}
+.chtp{background:#fff;padding:10px 16px 12px;border-bottom:1px solid #e2e8f0;}
+.chpt{font-size:21px;font-weight:700;color:#0f172a;}
+.chsb{font-size:11px;color:#94a3b8;margin-top:2px;}
+.chcd{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px;margin-bottom:10px;}
+.chwb{background:#eef2ff;border-radius:999px;padding:3px 10px;display:inline-block;font-size:10px;font-weight:600;color:#4338ca;margin-bottom:7px;}
+.cht{font-size:14px;font-weight:700;color:#0f172a;margin-bottom:5px;}
+.chd{font-size:11px;color:#64748b;line-height:1.5;margin-bottom:10px;}
+.chs{display:flex;align-items:center;gap:6px;margin-bottom:9px;}
+.sd{width:8px;height:8px;border-radius:50%;}
+.sl{font-size:11px;font-weight:500;}
+.chb{display:flex;gap:7px;}
+.bcm{flex:2;background:#6366f1;border-radius:10px;padding:9px;text-align:center;color:#fff;font-size:11px;font-weight:600;}
+.bgu{flex:1;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:9px;text-align:center;color:#64748b;font-size:11px;font-weight:500;}
+.pcr{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;}
+.pcr:last-child{border-bottom:none;}
+.pcn{font-size:11px;color:#334155;font-weight:500;}
+.pcd{font-size:10px;color:#94a3b8;margin-top:1px;}
+</style>
+</head>
+<body>
+
+<h1>Fina — Mobile Prototype</h1>
+<p>Interactive prototype · 7 screens · React Native / Expo</p>
+
+<div class="snav">
+  <button class="nb on" onclick="ss('login',this)">Login</button>
+  <button class="nb" onclick="ss('register',this)">Register</button>
+  <button class="nb" onclick="ss('dashboard',this)">Dashboard</button>
+  <button class="nb" onclick="ss('transactions',this)">Transactions</button>
+  <button class="nb" onclick="ss('addtx',this)">Add Transaction</button>
+  <button class="nb" onclick="ss('goals',this)">Goals</button>
+  <button class="nb" onclick="ss('challenge',this)">Challenge</button>
+</div>
+
+<div class="phone">
+  <div class="di"></div>
+  <div class="sb" id="sbar" style="background:#f8fafc;">
+    <span class="st">9:41</span>
+    <div class="si">
+      <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><rect x="0" y="3" width="2.5" height="8" rx="1" fill="#0f172a"/><rect x="4" y="2" width="2.5" height="9" rx="1" fill="#0f172a"/><rect x="8" y="0" width="2.5" height="11" rx="1" fill="#0f172a"/><rect x="12" y="0" width="2.5" height="11" rx="1" fill="#e2e8f0"/></svg>
+      <svg width="15" height="11" viewBox="0 0 15 11" fill="none"><path d="M7.5 2.5C5.5 2.5 3.7 3.4 2.4 4.8L1 3.3C2.7 1.3 5 0 7.5 0s4.8 1.3 6.5 3.3l-1.4 1.5C11.3 3.4 9.5 2.5 7.5 2.5z" fill="#0f172a"/><path d="M7.5 6C6.4 6 5.4 6.4 4.7 7.1L3.3 5.7C4.4 4.6 5.9 4 7.5 4s3.1.6 4.2 1.7L10.3 7.1C9.6 6.4 8.6 6 7.5 6z" fill="#0f172a"/><circle cx="7.5" cy="10" r="1.5" fill="#0f172a"/></svg>
+      <svg width="24" height="12" viewBox="0 0 24 12" fill="none"><rect x="0.5" y="0.5" width="20" height="11" rx="3.5" stroke="#0f172a" stroke-opacity="0.35"/><rect x="2" y="2" width="15" height="8" rx="2" fill="#0f172a"/><path d="M22 4v4a2 2 0 000-4z" fill="#0f172a" fill-opacity="0.4"/></svg>
+    </div>
+  </div>
+
+  <!-- LOGIN -->
+  <div class="scr on" id="s-login">
+    <div class="auth-bg">
+      <div class="alogo"><svg width="26" height="26" viewBox="0 0 26 26" fill="none"><path d="M13 3L23 9v8l-10 6L3 17V9l10-6z" fill="rgba(255,255,255,0.85)"/><path d="M13 7l7 4v5.5l-7 4-7-4V11l7-4z" fill="#6366f1"/></svg></div>
+      <div class="aname">Fina</div>
+      <div class="atag">Your personal finance advisor</div>
+      <div class="acard">
+        <div class="act">Welcome back</div>
+        <div class="acs">Sign in to continue to Fina</div>
+        <div class="fl">Email address</div>
+        <div class="fi v">jane@example.com</div>
+        <div class="fl">Password</div>
+        <div class="fi v">••••••••••</div>
+        <div style="text-align:right;margin-bottom:12px;"><span style="font-size:11px;color:#6366f1;font-weight:500;">Forgot password?</span></div>
+        <div class="bp">Sign in</div>
+        <div class="blr"><span>Don't have an account?</span><a href="#">Create one</a></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REGISTER -->
+  <div class="scr" id="s-register">
+    <div class="auth-bg">
+      <div class="alogo"><svg width="26" height="26" viewBox="0 0 26 26" fill="none"><path d="M13 3L23 9v8l-10 6L3 17V9l10-6z" fill="rgba(255,255,255,0.85)"/><path d="M13 7l7 4v5.5l-7 4-7-4V11l7-4z" fill="#6366f1"/></svg></div>
+      <div class="aname">Fina</div>
+      <div class="atag">Your personal finance advisor</div>
+      <div class="acard">
+        <div class="act">Create account</div>
+        <div class="acs">Start your financial journey</div>
+        <div class="fl">Full name</div>
+        <div class="fi">Jane Doe</div>
+        <div class="fl">Email address</div>
+        <div class="fi">you@example.com</div>
+        <div class="fl">Password</div>
+        <div class="fi">Min. 8 characters</div>
+        <div class="bp">Create account</div>
+        <div class="blr"><span>Already have an account?</span><a href="#">Sign in</a></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="scr" id="s-dashboard">
+    <div class="dh">
+      <div class="dgr">
+        <div><div class="dgt">Good morning, Jane</div><div class="ddt">Sunday, March 15</div></div>
+        <div class="av">JD</div>
+      </div>
+    </div>
+    <div class="sc">
+      <div class="db">
+        <div class="bc">
+          <div class="bcl">Net balance · March</div>
+          <div class="bca">$2,360.00</div>
+          <div class="brow">
+            <div class="bst"><div class="bsl">Income</div><div class="bsv">$4,200</div></div>
+            <div class="bst"><div class="bsl">Spent</div><div class="bsv">$1,840</div></div>
+          </div>
+        </div>
+        <div class="cw">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div class="ct">Weekly spending</div>
+            <div style="display:flex;gap:5px;"><div style="background:#eef2ff;border-radius:999px;padding:2px 9px;font-size:9px;font-weight:600;color:#4f46e5;">Weekly</div><div style="color:#94a3b8;font-size:9px;padding:2px 7px;">Monthly</div></div>
+          </div>
+          <div class="cbars">
+            <div class="cbw"><div class="cb" style="height:30px;"></div><div class="cbl">Mon</div></div>
+            <div class="cbw"><div class="cb" style="height:42px;"></div><div class="cbl">Tue</div></div>
+            <div class="cbw"><div class="cb" style="height:18px;"></div><div class="cbl">Wed</div></div>
+            <div class="cbw"><div class="cb" style="height:50px;"></div><div class="cbl">Thu</div></div>
+            <div class="cbw"><div class="cb" style="height:26px;"></div><div class="cbl">Fri</div></div>
+            <div class="cbw"><div class="cb ca" style="height:36px;"></div><div class="cbl" style="color:#6366f1;font-weight:600;">Sat</div></div>
+            <div class="cbw"><div class="cb ca" style="height:12px;opacity:0.5;"></div><div class="cbl" style="color:#6366f1;">Sun</div></div>
+          </div>
+        </div>
+        <div class="ic">
+          <div class="ii"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1L8 4.5H12L8.5 7 10 11 6.5 8.5 3 11 4.5 7 1 4.5H5L6.5 1Z" fill="white"/></svg></div>
+          <div><div class="it">AI Insights</div><div class="ix">You spent 12% less on dining this week. At this rate you'll hit your Emergency Fund goal 3 weeks early!</div></div>
+        </div>
+        <div class="sh"><div class="stt">Recent activity</div><div class="slk">View all</div></div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:13px;padding:2px 11px;">
+          <div class="tr">
+            <div class="tiw" style="background:#fef2f2;"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="2" y="5" width="11" height="8" rx="2" stroke="#ef4444" stroke-width="1.4"/><path d="M4.5 5V4a3 3 0 016 0v1" stroke="#ef4444" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+            <div style="flex:1;"><div class="tn">Grocery Store</div><div class="ttm">Today · Groceries</div></div>
+            <div class="ta n">-$62.40</div>
+          </div>
+          <div class="tr">
+            <div class="tiw" style="background:#fef9ec;"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="5.5" stroke="#f59e0b" stroke-width="1.4"/><path d="M7.5 5.5v2.5l1.5 1" stroke="#f59e0b" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+            <div style="flex:1;"><div class="tn">Starbucks</div><div class="ttm">Today · Dining</div></div>
+            <div class="ta n">-$7.50</div>
+          </div>
+          <div class="tr">
+            <div class="tiw" style="background:#ecfdf5;"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="2" y="4" width="11" height="7" rx="2" stroke="#10b981" stroke-width="1.4"/><path d="M5 8h5" stroke="#10b981" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+            <div style="flex:1;"><div class="tn">Payroll</div><div class="ttm">Yesterday · Income</div></div>
+            <div class="ta p">+$2,100</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="ti on"><svg width="21" height="21" viewBox="0 0 21 21" fill="none"><path d="M2.5 9L10.5 2.5l8 6.5V18.5a1 1 0 01-1 1H13.5v-5h-6v5H3.5a1 1 0 01-1-1V9z" fill="#6366f1"/></svg><span class="tl" style="color:#6366f1;font-weight:600;">Home</span></div>
+      <div class="ti"><svg width="21" height="21" viewBox="0 0 21 21" fill="none"><rect x="2" y="5" width="17" height="12" rx="2.5" stroke="#cbd5e1" stroke-width="1.5"/><path d="M2 9h17" stroke="#cbd5e1" stroke-width="1.5"/><path d="M5.5 13.5h4" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round"/></svg><span class="tl">Transactions</span></div>
+      <div class="ti"><svg width="21" height="21" viewBox="0 0 21 21" fill="none"><circle cx="10.5" cy="10.5" r="7.5" stroke="#cbd5e1" stroke-width="1.5"/><circle cx="10.5" cy="10.5" r="2.5" fill="#cbd5e1"/></svg><span class="tl">Goals</span></div>
+      <div class="ti"><svg width="21" height="21" viewBox="0 0 21 21" fill="none"><path d="M10.5 2.5l2 5.5h5.5l-4.5 3.5 1.5 5.5-4.5-3-4.5 3 1.5-5.5L2 8h5.5l3-5.5z" stroke="#cbd5e1" stroke-width="1.5" stroke-linejoin="round"/></svg><span class="tl">Challenge</span></div>
+    </div>
+  </div>
+
+  <!-- TRANSACTIONS -->
+  <div class="scr" id="s-transactions" style="position:relative;">
+    <div class="txtp">
+      <div class="txpt">Transactions</div>
+      <div class="fr"><div class="fc on">All</div><div class="fc">Income</div><div class="fc">Expenses</div></div>
+    </div>
+    <div class="sc" style="background:#f8fafc;">
+      <div class="tgl">Today · Mar 15</div>
+      <div class="txrw">
+        <div class="tiw" style="background:#fef2f2;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="2" y="5" width="11" height="8" rx="2" stroke="#ef4444" stroke-width="1.4"/><path d="M4.5 5V4a3 3 0 016 0v1" stroke="#ef4444" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+        <div style="flex:1;"><div class="tn">Grocery Store</div><div><span class="cb2" style="background:#fef2f2;color:#b91c1c;">Groceries</span></div></div>
+        <div><div class="ta n">-$62.40</div><div style="font-size:9px;color:#94a3b8;text-align:right;">10:23 AM</div></div>
+      </div>
+      <div class="txrw">
+        <div class="tiw" style="background:#fef9ec;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="5.5" stroke="#f59e0b" stroke-width="1.4"/><path d="M7.5 5.5v2.5l1.5 1" stroke="#f59e0b" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+        <div style="flex:1;"><div class="tn">Starbucks</div><div><span class="cb2" style="background:#fef9ec;color:#92400e;">Dining</span></div></div>
+        <div><div class="ta n">-$7.50</div><div style="font-size:9px;color:#94a3b8;text-align:right;">8:05 AM</div></div>
+      </div>
+      <div class="tgl">Yesterday · Mar 14</div>
+      <div class="txrw">
+        <div class="tiw" style="background:#ecfdf5;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="2" y="4" width="11" height="7" rx="2" stroke="#10b981" stroke-width="1.4"/><path d="M5 8h5" stroke="#10b981" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+        <div style="flex:1;"><div class="tn">Payroll deposit</div><div><span class="cb2" style="background:#ecfdf5;color:#065f46;">Income</span></div></div>
+        <div><div class="ta p">+$2,100</div><div style="font-size:9px;color:#94a3b8;text-align:right;">9:00 AM</div></div>
+      </div>
+      <div class="txrw">
+        <div class="tiw" style="background:#eff6ff;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="5.5" stroke="#3b82f6" stroke-width="1.4"/><path d="M5.5 9.5V7.5l2-4 2 4v2" stroke="#3b82f6" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
+        <div style="flex:1;"><div class="tn">Uber</div><div><span class="cb2" style="background:#eff6ff;color:#1e40af;">Transport</span></div></div>
+        <div><div class="ta n">-$18.20</div><div style="font-size:9px;color:#94a3b8;text-align:right;">7:45 PM</div></div>
+      </div>
+      <div class="txrw">
+        <div class="tiw" style="background:#fdf4ff;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="3" y="2" width="9" height="11" rx="2" stroke="#a855f7" stroke-width="1.4"/><path d="M5.5 5.5h4M5.5 8h2.5" stroke="#a855f7" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+        <div style="flex:1;"><div class="tn">Netflix</div><div><span class="cb2" style="background:#fdf4ff;color:#6b21a8;">Subscriptions</span></div></div>
+        <div><div class="ta n">-$15.99</div><div style="font-size:9px;color:#94a3b8;text-align:right;">12:00 AM</div></div>
+      </div>
+      <div style="height:72px;"></div>
+    </div>
+    <div class="fab"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 3v12M3 9h12" stroke="white" stroke-width="2" stroke-linecap="round"/></svg></div>
+    <div class="tabbar">
+      <div class="ti"><svg width="21" height="21" viewBox="0 0 21 21" fill="none"><path d="M2.5 9L10.5 2.5l8 6.5V18.5a1 1 0 01-1 1H13.5v-5h-6v5H3.5a1 1 0 01-1-1V9z" stroke="#cbd5e1" stroke-width="1.5" stroke-linejoin="round"/></svg><span class="tl">Home</span></div>
+      <div class="ti on"><svg width="21" height="21" viewBox="0 0 21 21" fill="none"><rect x="2" y="5" width="17" height="12" rx="2.5" fill="#6366f1"/><path d="M2 9h17" stroke="white" stroke-width="1.5"/><path d="M5.5 13.5h4" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg><span class="tl" style="color:#6366f1;font-weight:600;">Transactions</span></div>
+      <div class="ti"><svg width="21" height="21" viewBox="0 0 21 21" fill="none"><circle cx="10.5" cy="10.5" r="7.5" stroke="#cbd5e1" stroke-width="1.5"/><circle cx="10.5" cy="10.5" r="2.5" fill="#cbd5e1"/></svg><span class="tl">Goals</span></div>
+      <div class="ti"><svg width="21" height="21" viewBox="0 0 21 21" fill="none"><path d="M10.5 2.5l2 5.5h5.5l-4.5 3.5 1.5 5.5-4.5-3-4.5 3 1.5-5.5L2 8h5.5l3-5.5z" stroke="#cbd5e1" stroke-width="1.5" stroke-linejoin="round"/></svg><span class="tl">Challenge</span></div>
+    </div>
+  </div>
+
+  <!-- ADD TRANSACTION -->
+  <div class="scr" id="s-addtx" style="background:rgba(0,0,0,0.32);flex-direction:column;">
+    <div style="flex:1;"></div>
+    <div style="background:#fff;border-radius:24px 24px 0 0;display:flex;flex-direction:column;">
+      <div class="mh"></div>
+      <div class="mhd">
+        <div class="mtt">Add transaction</div>
+        <div class="mcl"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 1l9 9M10 1L1 10" stroke="#64748b" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+      </div>
+      <div class="mb">
+        <div class="ttog">
+          <div class="to ii2">Income</div>
+          <div class="to ea">Expense</div>
+        </div>
+        <div style="margin-bottom:12px;"><div class="mfl">Description</div><div class="mfi">Starbucks coffee</div></div>
+        <div style="margin-bottom:12px;"><div class="mfl">Amount</div>
+          <div class="amtr"><span class="amc">$</span><span class="amv">7.50</span></div>
+        </div>
+        <div style="margin-bottom:12px;"><div class="mfl">Category</div>
+          <div class="aipl">
+            <div class="ais"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1l1.2 3.5H10L6.9 6.8l1.2 3.2L5 8.2 1.9 10l1.2-3.2L0 4.5h3.8L5 1z" fill="white"/></svg></div>
+            <div><div class="aicl">AI detected</div><div class="aicv">Dining &amp; Cafes</div></div>
+          </div>
+        </div>
+        <div style="margin-bottom:14px;"><div class="mfl">Date</div><div class="mfi">March 15, 2026</div></div>
+        <div class="bp" style="border-radius:13px;">Save transaction</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GOALS -->
+  <div class="scr" id="s-goals">
+    <div class="gtp"><div class="gpt">Goals</div><div class="bag">+ New goal</div></div>
+    <div class="sc" style="background:#f8fafc;">
+      <div style="padding:12px 14px 0;">
+        <div class="gc">
+          <div class="gch"><div><div class="gn">Emergency Fund</div><div class="gd">Target: Dec 2026</div></div><div class="gp">65%</div></div>
+          <div class="pt"><div class="pf" style="width:65%;"></div></div>
+          <div class="gam"><div class="gs">$6,500 saved</div><div class="gt">of $10,000</div></div>
+        </div>
+        <div class="gc">
+          <div class="gch"><div><div class="gn">Europe Vacation</div><div class="gd">Target: Jun 2026</div></div><div class="gp" style="color:#10b981;">30%</div></div>
+          <div class="pt"><div class="pf" style="width:30%;background:#10b981;"></div></div>
+          <div class="gam"><div class="gs">$1,200 saved</div><div class="gt">of $4,000</div></div>
+        </div>
+        <div class="gc">
+          <div class="gch"><div><div class="gn">New MacBook Pro</div><div class="gd">Target: Sep 2026</div></div><div class="gp" style="color:#f59e0b;">18%</div></div>
+          <div class="pt"><div class="pf" style="width:18%;background:#f59e0b;"></div></div>
+          <div class="gam"><div class="gs">$540 saved</div><div class="gt">of $3,000</div></div>
+        </div>
+        <div class="arc">
+          <div class="art"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1L7 4H11L7.5 6.5 9 10 5.5 7.5 2 10 3.5 6.5 0 4h4L5.5 1z" fill="#059669"/></svg>AI Recommendation</div>
+          <div class="arx">Save $240/month to hit your Emergency Fund by August — 4 months ahead of schedule!</div>
+        </div>
+      </div>
+      <div style="height:16px;"></div>
+    </div>
+    <div class="tabbar">
+      <div class="ti"><svg width="21" height="21" viewBox="0 0 21 21" fill="none"><path d="M2.5 9L10.5 2.5l8 6.5V18.5a1 1 0 01-1 1H13.5v-5h-6v5H3.5a1 1 0 01-1-1V9z" stroke="#cbd5e1" stroke-width="1.5" stroke-linejoin="round"/></svg><span class="tl">Home</span></div>
+      <div class="ti"><svg width="21" height="21" viewBox="0 0 21 21" fill="none"><rect x="2" y="5" width="17" height="12" rx="2.5" stroke="#cbd5e1" stroke-width="1.5"/><path d="M2 9h17" stroke="#cbd5e1" stroke-width="1.5"/></svg><span class="tl">Transactions</span></div>
+      <div class="ti on"><svg width="21" height="21" viewBox="0 0 21 21" fill="none"><circle cx="10.5" cy="10.5" r="7.5" fill="#6366f1"/><circle cx="10.5" cy="10.5" r="2.5" fill="white"/></svg><span class="tl" style="color:#6366f1;font-weight:600;">Goals</span></div>
+      <div class="ti"><svg width="21" height="21" viewBox="0 0 21 21" fill="none"><path d="M10.5 2.5l2 5.5h5.5l-4.5 3.5 1.5 5.5-4.5-3-4.5 3 1.5-5.5L2 8h5.5l3-5.5z" stroke="#cbd5e1" stroke-width="1.5" stroke-linejoin="round"/></svg><span class="tl">Challenge</span></div>
+    </div>
+  </div>
+
+  <!-- CHALLENGE -->
+  <div class="scr" id="s-challenge">
+    <div class="chtp"><div class="chpt">Challenge</div><div class="chsb">Your AI-generated weekly challenge</div></div>
+    <div class="sc" style="background:#f8fafc;">
+      <div style="padding:12px 14px 0;">
+        <div class="chcd">
+          <div class="chwb">Mar 10 – 16 · This week</div>
+          <div class="cht">No-spend dining week</div>
+          <div class="chd">Cook all meals at home this week. Avoid any restaurant, cafe, or takeout spending. Every dollar saved goes to your Emergency Fund.</div>
+          <div class="chs">
+            <div class="sd" style="background:#f59e0b;"></div>
+            <span class="sl" style="color:#b45309;">In progress</span>
+            <span style="margin-left:auto;font-size:10px;color:#94a3b8;">5 of 7 days</span>
+          </div>
+          <div style="height:5px;background:#f1f5f9;border-radius:999px;margin-bottom:11px;overflow:hidden;"><div style="height:100%;width:71%;background:#f59e0b;border-radius:999px;"></div></div>
+          <div class="chb"><div class="bcm">Mark as complete</div><div class="bgu">Give up</div></div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:13px;padding:13px;margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:700;color:#0f172a;margin-bottom:9px;">Past challenges</div>
+          <div class="pcr">
+            <div><div class="pcn">Coffee budget week</div><div class="pcd">Mar 3 – 9</div></div>
+            <div style="background:#ecfdf5;border-radius:999px;padding:3px 9px;font-size:9px;font-weight:600;color:#065f46;">Completed</div>
+          </div>
+          <div class="pcr">
+            <div><div class="pcn">Skip subscriptions</div><div class="pcd">Feb 24 – Mar 2</div></div>
+            <div style="background:#fef2f2;border-radius:999px;padding:3px 9px;font-size:9px;font-weight:600;color:#991b1b;">Not completed</div>
+          </div>
+          <div class="pcr">
+            <div><div class="pcn">$20 grocery challenge</div><div class="pcd">Feb 17 – 23</div></div>
+            <div style="background:#ecfdf5;border-radius:999px;padding:3px 9px;font-size:9px;font-weight:600;color:#065f46;">Completed</div>
+          </div>
+        </div>
+        <div style="background:#eef2ff;border-radius:12px;padding:11px 13px;margin-bottom:10px;">
+          <div style="font-size:10px;font-weight:600;color:#3730a3;margin-bottom:3px;">Next week preview</div>
+          <div style="font-size:11px;color:#4f46e5;line-height:1.4;">Your AI advisor will generate a new personalised challenge on Sunday based on your spending patterns.</div>
+        </div>
+      </div>
+      <div style="height:16px;"></div>
+    </div>
+    <div class="tabbar">
+      <div class="ti"><svg width="21" height="21" viewBox="0 0 21 21" fill="none"><path d="M2.5 9L10.5 2.5l8 6.5V18.5a1 1 0 01-1 1H13.5v-5h-6v5H3.5a1 1 0 01-1-1V9z" stroke="#cbd5e1" stroke-width="1.5" stroke-linejoin="round"/></svg><span class="tl">Home</span></div>
+      <div class="ti"><svg width="21" height="21" viewBox="0 0 21 21" fill="none"><rect x="2" y="5" width="17" height="12" rx="2.5" stroke="#cbd5e1" stroke-width="1.5"/><path d="M2 9h17" stroke="#cbd5e1" stroke-width="1.5"/></svg><span class="tl">Transactions</span></div>
+      <div class="ti"><svg width="21" height="21" viewBox="0 0 21 21" fill="none"><circle cx="10.5" cy="10.5" r="7.5" stroke="#cbd5e1" stroke-width="1.5"/><circle cx="10.5" cy="10.5" r="2.5" fill="#cbd5e1"/></svg><span class="tl">Goals</span></div>
+      <div class="ti on"><svg width="21" height="21" viewBox="0 0 21 21" fill="none"><path d="M10.5 2.5l2 5.5h5.5l-4.5 3.5 1.5 5.5-4.5-3-4.5 3 1.5-5.5L2 8h5.5l3-5.5z" fill="#6366f1"/></svg><span class="tl" style="color:#6366f1;font-weight:600;">Challenge</span></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function ss(id,btn){
+  document.querySelectorAll('.scr').forEach(function(s){s.classList.remove('on');});
+  document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('on');});
+  var s=document.getElementById('s-'+id);
+  if(s) s.classList.add('on');
+  if(btn) btn.classList.add('on');
+  var sb=document.getElementById('sbar');
+  if(sb){
+    var isAuth=(id==='login'||id==='register');
+    var isModal=(id==='addtx');
+    if(isAuth){sb.style.background='#f8fafc';sb.style.borderBottom='none';}
+    else if(isModal){sb.style.background='transparent';sb.style.borderBottom='none';}
+    else{sb.style.background='#fff';sb.style.borderBottom='1px solid #e2e8f0';}
+  }
+}
+</script>
+</body>
+</html>
