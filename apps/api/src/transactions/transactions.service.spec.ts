@@ -26,6 +26,8 @@ const mockPrisma = {
     findMany: jest.fn(),
     count: jest.fn(),
     findFirst: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
   },
   $transaction: jest.fn(),
 };
@@ -224,6 +226,65 @@ describe('TransactionsService', () => {
       mockPrisma.transaction.findFirst.mockResolvedValue(null);
 
       await expect(service.findOne('user-1', 'bad-id')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // update
+  // -------------------------------------------------------------------------
+
+  describe('update', () => {
+    it('should update allowed fields', async () => {
+      mockPrisma.transaction.findFirst.mockResolvedValue(mockTransaction);
+      mockPrisma.transaction.update.mockResolvedValue({
+        ...mockTransaction,
+        description: 'Latte',
+        amount: 6,
+      });
+
+      const result = await service.update('user-1', 'tx-1', {
+        description: 'Latte',
+        amount: 6,
+      });
+
+      expect(mockPrisma.transaction.update).toHaveBeenCalledWith({
+        where: { id: 'tx-1' },
+        data: { description: 'Latte', amount: 6 },
+      });
+      expect(result.description).toBe('Latte');
+    });
+
+    it('should throw NotFoundException when transaction does not belong to user', async () => {
+      mockPrisma.transaction.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.update('user-1', 'bad-id', { amount: 10 }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // delete
+  // -------------------------------------------------------------------------
+
+  describe('delete', () => {
+    it('should delete a transaction belonging to the user', async () => {
+      mockPrisma.transaction.findFirst.mockResolvedValue(mockTransaction);
+      mockPrisma.transaction.delete.mockResolvedValue(mockTransaction);
+
+      await service.delete('user-1', 'tx-1');
+
+      expect(mockPrisma.transaction.delete).toHaveBeenCalledWith({
+        where: { id: 'tx-1' },
+      });
+    });
+
+    it('should throw NotFoundException when transaction does not belong to user', async () => {
+      mockPrisma.transaction.findFirst.mockResolvedValue(null);
+
+      await expect(service.delete('user-1', 'bad-id')).rejects.toThrow(
         NotFoundException,
       );
     });
