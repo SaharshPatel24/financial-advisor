@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import Anthropic from '@anthropic-ai/sdk';
+import { ChatAnthropic } from '@langchain/anthropic';
+import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { AiService } from './ai.service';
 import type { Transaction } from '@financial-advisor/shared';
 
@@ -8,9 +9,37 @@ import type { Transaction } from '@financial-advisor/shared';
 // Mocks
 // ---------------------------------------------------------------------------
 
-jest.mock('@anthropic-ai/sdk');
-jest.mock('@anthropic-ai/sdk/helpers/zod', () => ({
-  zodOutputFormat: jest.fn().mockReturnValue({ type: 'json_schema' }),
+// Shared invoke spy — assigned in beforeEach so it can be controlled per-test
+let mockInvoke: jest.Mock;
+
+jest.mock('@langchain/anthropic', () => ({
+  ChatAnthropic: jest.fn().mockImplementation(() => ({
+    withStructuredOutput: jest.fn().mockReturnValue({
+      invoke: (...args: unknown[]) => mockInvoke(...args),
+    }),
+    pipe: jest.fn().mockReturnValue({
+      pipe: jest.fn().mockReturnValue({
+        invoke: (...args: unknown[]) => mockInvoke(...args),
+      }),
+    }),
+  })),
+}));
+
+jest.mock('@langchain/core/prompts', () => ({
+  ChatPromptTemplate: {
+    fromTemplate: jest.fn().mockReturnValue({
+      pipe: jest.fn().mockReturnValue({
+        pipe: jest.fn().mockReturnValue({
+          invoke: (...args: unknown[]) => mockInvoke(...args),
+        }),
+        invoke: (...args: unknown[]) => mockInvoke(...args),
+      }),
+    }),
+  },
+}));
+
+jest.mock('@langchain/core/output_parsers', () => ({
+  StringOutputParser: jest.fn().mockImplementation(() => ({})),
 }));
 
 const mockConfigService = {
@@ -48,10 +77,10 @@ const mockTransactions: Transaction[] = [
 
 describe('AiService', () => {
   let service: AiService;
-  let mockClient: jest.Mocked<Anthropic>;
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockInvoke = jest.fn();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -61,19 +90,30 @@ describe('AiService', () => {
     }).compile();
 
     service = module.get<AiService>(AiService);
-    mockClient = (Anthropic as jest.MockedClass<typeof Anthropic>).mock
-      .instances[0] as jest.Mocked<Anthropic>;
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  it('should initialise Anthropic client with ANTHROPIC_API_KEY', () => {
+  it('should initialise ChatAnthropic with ANTHROPIC_API_KEY', () => {
     expect(mockConfigService.getOrThrow).toHaveBeenCalledWith(
       'ANTHROPIC_API_KEY',
     );
-    expect(Anthropic).toHaveBeenCalledWith({ apiKey: 'test-api-key' });
+    expect(ChatAnthropic).toHaveBeenCalledWith(
+      expect.objectContaining({
+        apiKey: 'test-api-key',
+        model: 'claude-opus-4-6',
+      }),
+    );
+  });
+
+  it('should create a thinking model with extended thinking enabled', () => {
+    expect(ChatAnthropic).toHaveBeenCalledWith(
+      expect.objectContaining({
+        thinking: { type: 'enabled', budget_tokens: 8000 },
+      }),
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -81,11 +121,9 @@ describe('AiService', () => {
   // -------------------------------------------------------------------------
 
   describe('categorizeTransaction', () => {
-    it('should call messages.parse and return category + confidence', async () => {
-      const mockParsed = { category: 'Food', confidence: 0.92 };
-      (mockClient.messages as any) = {
-        parse: jest.fn().mockResolvedValue({ parsed_output: mockParsed }),
-      };
+    it('should invoke the structured output chain and return category + confidence', async () => {
+      const mockResult = { category: 'Food', confidence: 0.92 };
+      mockInvoke.mockResolvedValue(mockResult);
 
       const result = await service.categorizeTransaction(
         'Grocery store',
@@ -93,16 +131,14 @@ describe('AiService', () => {
         'EXPENSE',
       );
 
-      expect(mockClient.messages.parse).toHaveBeenCalledWith(
+      expect(mockInvoke).toHaveBeenCalledWith(
         expect.objectContaining({
-          model: 'claude-opus-4-6',
-          max_tokens: 256,
-          messages: expect.arrayContaining([
-            expect.objectContaining({ role: 'user' }),
-          ]),
+          description: expect.any(String),
+          type: 'EXPENSE',
+          categories: expect.any(String),
         }),
       );
-      expect(result).toEqual(mockParsed);
+      expect(result).toEqual(mockResult);
     });
   });
 
@@ -111,50 +147,28 @@ describe('AiService', () => {
   // -------------------------------------------------------------------------
 
   describe('generateInsights', () => {
-    it('should stream insights and return plain text', async () => {
-      const mockContent: Anthropic.ContentBlock[] = [
-        { type: 'text', text: 'You spend too much on food.' },
-      ];
-      const mockStream = {
-        finalMessage: jest
-          .fn()
-          .mockResolvedValue({ content: mockContent, stop_reason: 'end_turn' }),
-      };
-      (mockClient.messages as any) = {
-        stream: jest.fn().mockReturnValue(mockStream),
-      };
+    it('should invoke the text chain and return plain text', async () => {
+      mockInvoke.mockResolvedValue('You spend too much on food.');
 
       const result = await service.generateInsights(mockTransactions, 'weekly');
 
-      expect(mockClient.messages.stream).toHaveBeenCalledWith(
+      expect(mockInvoke).toHaveBeenCalledWith(
         expect.objectContaining({
-          model: 'claude-opus-4-6',
-          thinking: { type: 'adaptive' },
-          messages: expect.arrayContaining([
-            expect.objectContaining({ role: 'user' }),
-          ]),
+          period: 'weekly',
+          summary: expect.any(String),
         }),
       );
       expect(result).toBe('You spend too much on food.');
     });
 
-    it('should handle empty transactions', async () => {
-      const mockStream = {
-        finalMessage: jest.fn().mockResolvedValue({
-          content: [{ type: 'text', text: 'No data available.' }],
-          stop_reason: 'end_turn',
-        }),
-      };
-      (mockClient.messages as any) = {
-        stream: jest.fn().mockReturnValue(mockStream),
-      };
+    it('should pass "No transactions available." in summary for empty list', async () => {
+      mockInvoke.mockResolvedValue('No data available.');
 
-      const result = await service.generateInsights([], 'monthly');
+      await service.generateInsights([], 'monthly');
 
-      const userMessage = (mockClient.messages.stream as jest.Mock).mock
-        .calls[0][0].messages[0].content as string;
-      expect(userMessage).toContain('No transactions available.');
-      expect(result).toBe('No data available.');
+      expect(mockInvoke).toHaveBeenCalledWith(
+        expect.objectContaining({ summary: 'No transactions available.' }),
+      );
     });
   });
 
@@ -163,16 +177,8 @@ describe('AiService', () => {
   // -------------------------------------------------------------------------
 
   describe('generateGoalRecommendation', () => {
-    it('should stream a goal recommendation', async () => {
-      const mockStream = {
-        finalMessage: jest.fn().mockResolvedValue({
-          content: [{ type: 'text', text: 'Cut dining out by 20%.' }],
-          stop_reason: 'end_turn',
-        }),
-      };
-      (mockClient.messages as any) = {
-        stream: jest.fn().mockReturnValue(mockStream),
-      };
+    it('should invoke chain and return recommendation text', async () => {
+      mockInvoke.mockResolvedValue('Cut dining out by 20%.');
 
       const goal = {
         description: 'Save for vacation',
@@ -184,34 +190,39 @@ describe('AiService', () => {
         mockTransactions,
       );
 
-      expect(mockClient.messages.stream).toHaveBeenCalledWith(
-        expect.objectContaining({
-          model: 'claude-opus-4-6',
-          thinking: { type: 'adaptive' },
-        }),
-      );
+      expect(mockInvoke).toHaveBeenCalled();
       expect(result).toBe('Cut dining out by 20%.');
     });
 
-    it('should omit deadline line when not provided', async () => {
-      const mockStream = {
-        finalMessage: jest.fn().mockResolvedValue({
-          content: [{ type: 'text', text: 'Advice.' }],
-          stop_reason: 'end_turn',
-        }),
-      };
-      (mockClient.messages as any) = {
-        stream: jest.fn().mockReturnValue(mockStream),
-      };
+    it('should pass empty deadlineLine when deadline is not provided', async () => {
+      mockInvoke.mockResolvedValue('Advice.');
 
       await service.generateGoalRecommendation(
         { description: 'Emergency fund', targetAmount: 1000 },
         [],
       );
 
-      const prompt = (mockClient.messages.stream as jest.Mock).mock.calls[0][0]
-        .messages[0].content as string;
-      expect(prompt).not.toContain('Deadline:');
+      expect(mockInvoke).toHaveBeenCalledWith(
+        expect.objectContaining({ deadlineLine: '' }),
+      );
+    });
+
+    it('should pass deadlineLine when deadline is provided', async () => {
+      mockInvoke.mockResolvedValue('Advice.');
+
+      // deadline is truncated to YYYY-MM by the anonymizer
+      await service.generateGoalRecommendation(
+        {
+          description: 'savings goal',
+          targetAmount: 1000,
+          deadline: '2025-06-01',
+        },
+        [],
+      );
+
+      expect(mockInvoke).toHaveBeenCalledWith(
+        expect.objectContaining({ deadlineLine: 'Deadline: 2025-06' }),
+      );
     });
   });
 
@@ -220,15 +231,8 @@ describe('AiService', () => {
   // -------------------------------------------------------------------------
 
   describe('generateWeeklyChallenge', () => {
-    it('should call messages.create and return challenge text', async () => {
-      (mockClient.messages as any) = {
-        create: jest.fn().mockResolvedValue({
-          content: [
-            { type: 'text', text: 'Spend less than $60 on Food this week.' },
-          ],
-          stop_reason: 'end_turn',
-        }),
-      };
+    it('should invoke chain and return challenge text', async () => {
+      mockInvoke.mockResolvedValue('Spend less than $60 on Food this week.');
 
       const weekStart = new Date('2025-01-06');
       const weekEnd = new Date('2025-01-12');
@@ -238,34 +242,19 @@ describe('AiService', () => {
         weekEnd,
       );
 
-      expect(mockClient.messages.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          model: 'claude-opus-4-6',
-          max_tokens: 256,
-          messages: expect.arrayContaining([
-            expect.objectContaining({ role: 'user' }),
-          ]),
-        }),
-      );
       expect(result).toBe('Spend less than $60 on Food this week.');
     });
 
-    it('should include date range in the prompt', async () => {
-      (mockClient.messages as any) = {
-        create: jest.fn().mockResolvedValue({
-          content: [{ type: 'text', text: 'Save at least $50.' }],
-          stop_reason: 'end_turn',
-        }),
-      };
+    it('should include date range in chain invocation', async () => {
+      mockInvoke.mockResolvedValue('Save at least $50.');
 
       const weekStart = new Date('2025-03-10');
       const weekEnd = new Date('2025-03-16');
       await service.generateWeeklyChallenge([], weekStart, weekEnd);
 
-      const prompt = (mockClient.messages.create as jest.Mock).mock.calls[0][0]
-        .messages[0].content as string;
-      expect(prompt).toContain('2025-03-10');
-      expect(prompt).toContain('2025-03-16');
+      expect(mockInvoke).toHaveBeenCalledWith(
+        expect.objectContaining({ from: '2025-03-10', to: '2025-03-16' }),
+      );
     });
   });
 });
