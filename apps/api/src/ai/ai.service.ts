@@ -10,20 +10,24 @@ import type {
   TransactionCategory,
   TransactionType,
 } from '@financial-advisor/shared';
+import {
+  anonGoal,
+  anonTransactions,
+  scrubDescription,
+  type AnonTransaction,
+} from './anonymizer';
 
-const TRANSACTION_CATEGORIES: [
-  TransactionCategory,
-  ...TransactionCategory[],
-] = [
-  'Food',
-  'Transport',
-  'Bills',
-  'Entertainment',
-  'Shopping',
-  'Health',
-  'Income',
-  'Other',
-];
+const TRANSACTION_CATEGORIES: [TransactionCategory, ...TransactionCategory[]] =
+  [
+    'Food',
+    'Transport',
+    'Bills',
+    'Entertainment',
+    'Shopping',
+    'Health',
+    'Income',
+    'Other',
+  ];
 
 const CategorizationSchema = z.object({
   category: z.enum(TRANSACTION_CATEGORIES),
@@ -48,6 +52,7 @@ export class AiService {
     amount: number,
     type: TransactionType,
   ): Promise<Categorization> {
+    const safeDescription = scrubDescription(description);
     const response = await this.client.messages.parse({
       model: this.model,
       max_tokens: 256,
@@ -55,7 +60,7 @@ export class AiService {
         {
           role: 'user',
           content: `Categorize this transaction:
-Description: ${description}
+Description: ${safeDescription}
 Amount: $${amount}
 Type: ${type}
 
@@ -75,6 +80,7 @@ Return a confidence score between 0 and 1.`,
     transactions: Transaction[],
     period: InsightPeriod,
   ): Promise<string> {
+    const safeTxs = anonTransactions(transactions);
     const stream = this.client.messages.stream({
       model: this.model,
       max_tokens: 1024,
@@ -85,7 +91,7 @@ Return a confidence score between 0 and 1.`,
           content: `You are a personal finance advisor. Analyze the following ${period} transactions and provide 2-3 actionable insights in under 200 words.
 
 Transaction summary:
-${buildTransactionSummary(transactions)}`,
+${buildTransactionSummary(safeTxs)}`,
         },
       ],
     });
@@ -98,7 +104,11 @@ ${buildTransactionSummary(transactions)}`,
     goal: CreateGoalDto,
     transactions: Transaction[],
   ): Promise<string> {
-    const deadlineLine = goal.deadline ? `Deadline: ${goal.deadline}` : '';
+    const safeGoal = anonGoal(goal);
+    const safeTxs = anonTransactions(transactions);
+    const deadlineLine = safeGoal.deadline
+      ? `Deadline: ${safeGoal.deadline}`
+      : '';
 
     const stream = this.client.messages.stream({
       model: this.model,
@@ -109,12 +119,12 @@ ${buildTransactionSummary(transactions)}`,
           role: 'user',
           content: `You are a personal finance advisor. Given this savings goal and recent spending, provide a concrete recommendation in 2-3 sentences.
 
-Goal: ${goal.description}
-Target: $${goal.targetAmount}
+Goal: ${safeGoal.description}
+Target: $${safeGoal.targetAmount}
 ${deadlineLine}
 
 Recent spending:
-${buildTransactionSummary(transactions)}`,
+${buildTransactionSummary(safeTxs)}`,
         },
       ],
     });
@@ -128,6 +138,7 @@ ${buildTransactionSummary(transactions)}`,
     weekStart: Date,
     weekEnd: Date,
   ): Promise<string> {
+    const safeTxs = anonTransactions(transactions);
     const from = weekStart.toISOString().split('T')[0];
     const to = weekEnd.toISOString().split('T')[0];
 
@@ -140,7 +151,7 @@ ${buildTransactionSummary(transactions)}`,
           content: `You are a personal finance coach. Based on this user's recent spending, generate one specific, achievable weekly challenge for ${from} to ${to}.
 
 Recent spending:
-${buildTransactionSummary(transactions)}
+${buildTransactionSummary(safeTxs)}
 
 Return exactly one sentence starting with "Spend less than", "Save at least", or "Limit your". Use specific dollar amounts from the data.`,
         },
@@ -155,7 +166,7 @@ Return exactly one sentence starting with "Spend less than", "Save at least", or
 // Module-private helpers
 // ---------------------------------------------------------------------------
 
-function buildTransactionSummary(transactions: Transaction[]): string {
+function buildTransactionSummary(transactions: AnonTransaction[]): string {
   if (transactions.length === 0) return 'No transactions available.';
 
   const byCategory = transactions.reduce<
