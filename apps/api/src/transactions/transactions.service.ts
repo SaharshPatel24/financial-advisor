@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Transaction } from '@prisma/client';
 import type { PaginatedTransactions } from '@financial-advisor/shared';
-import { AiService } from '../ai/ai.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { GetTransactionsQueryDto } from './dto/get-transactions-query.dto';
@@ -12,40 +11,19 @@ const DEFAULT_LIMIT = 20;
 
 @Injectable()
 export class TransactionsService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly ai: AiService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(
     userId: string,
     dto: CreateTransactionDto,
   ): Promise<Transaction> {
-    let category = dto.category;
-    let aiConfidence: number | null = null;
-
-    if (!category) {
-      try {
-        const result = await this.ai.categorizeTransaction(
-          dto.description,
-          dto.amount,
-          dto.type,
-        );
-        category = result.category;
-        aiConfidence = result.confidence;
-      } catch {
-        category = 'Other';
-      }
-    }
-
     return this.prisma.transaction.create({
       data: {
         userId,
         description: dto.description,
         amount: dto.amount,
         type: dto.type,
-        category,
-        aiConfidence,
+        category: dto.category,
         date: dto.date ? new Date(dto.date) : new Date(),
       },
     });
