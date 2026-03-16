@@ -38,15 +38,23 @@ const CategorizationSchema = z.object({
 
 type Categorization = z.infer<typeof CategorizationSchema>;
 
+const STATIC_FALLBACKS = {
+  categorization: { category: 'Other' as TransactionCategory, confidence: 0 },
+  text: 'Our AI advisor is temporarily unavailable. Please try again shortly.',
+  challenge: 'Save at least $10 this week as a starting point.',
+} as const;
+
 @Injectable()
 export class AiService {
   private readonly model: BaseChatModel;
   private readonly thinkingModel: BaseChatModel;
+  private readonly fallbackModels: BaseChatModel[];
 
   constructor(config: ConfigService) {
-    const { model, thinkingModel } = createLlmPair(config);
+    const { model, thinkingModel, fallbackModels } = createLlmPair(config);
     this.model = model;
     this.thinkingModel = thinkingModel;
+    this.fallbackModels = fallbackModels;
   }
 
   async categorizeTransaction(
@@ -64,15 +72,25 @@ Type: {type}
 Choose from: {categories}.
 Return a confidence score between 0 and 1.`,
     );
-
-    const chain = prompt.pipe(
-      this.model.withStructuredOutput(CategorizationSchema),
-    );
-    return chain.invoke({
+    const vars = {
       description: safeDescription,
       type,
       categories: TRANSACTION_CATEGORIES.join(', '),
-    });
+    };
+
+    return invokeWithFallbacks(
+      () =>
+        prompt
+          .pipe(this.model.withStructuredOutput(CategorizationSchema))
+          .invoke(vars),
+      this.fallbackModels.map(
+        (f) => () =>
+          prompt
+            .pipe(f.withStructuredOutput(CategorizationSchema))
+            .invoke(vars),
+      ),
+      STATIC_FALLBACKS.categorization,
+    );
   }
 
   async generateInsights(
@@ -86,11 +104,16 @@ Return a confidence score between 0 and 1.`,
 Transaction summary:
 {summary}`,
     );
+    const vars = { period, summary: buildTransactionSummary(safeTxs) };
+    const parser = new StringOutputParser();
 
-    const chain = prompt
-      .pipe(this.thinkingModel)
-      .pipe(new StringOutputParser());
-    return chain.invoke({ period, summary: buildTransactionSummary(safeTxs) });
+    return invokeWithFallbacks(
+      () => prompt.pipe(this.thinkingModel).pipe(parser).invoke(vars),
+      this.fallbackModels.map(
+        (f) => () => prompt.pipe(f).pipe(parser).invoke(vars),
+      ),
+      STATIC_FALLBACKS.text,
+    );
   }
 
   async generateGoalRecommendation(
@@ -113,15 +136,20 @@ Target: ${safeGoal.targetAmount}
 Recent spending:
 {summary}`,
     );
-
-    const chain = prompt
-      .pipe(this.thinkingModel)
-      .pipe(new StringOutputParser());
-    return chain.invoke({
+    const vars = {
       goalDescription: safeGoal.description,
       deadlineLine,
       summary: buildTransactionSummary(safeTxs),
-    });
+    };
+    const parser = new StringOutputParser();
+
+    return invokeWithFallbacks(
+      () => prompt.pipe(this.thinkingModel).pipe(parser).invoke(vars),
+      this.fallbackModels.map(
+        (f) => () => prompt.pipe(f).pipe(parser).invoke(vars),
+      ),
+      STATIC_FALLBACKS.text,
+    );
   }
 
   async generateWeeklyChallenge(
@@ -141,19 +169,41 @@ Recent spending:
 
 Return exactly one sentence starting with "Spend less than", "Save at least", or "Limit your". Use specific dollar amounts from the data.`,
     );
+    const vars = { from, to, summary: buildTransactionSummary(safeTxs) };
+    const parser = new StringOutputParser();
 
-    const chain = prompt.pipe(this.model).pipe(new StringOutputParser());
-    return chain.invoke({
-      from,
-      to,
-      summary: buildTransactionSummary(safeTxs),
-    });
+    return invokeWithFallbacks(
+      () => prompt.pipe(this.model).pipe(parser).invoke(vars),
+      this.fallbackModels.map(
+        (f) => () => prompt.pipe(f).pipe(parser).invoke(vars),
+      ),
+      STATIC_FALLBACKS.challenge,
+    );
   }
 }
 
 // ---------------------------------------------------------------------------
 // Module-private helpers
 // ---------------------------------------------------------------------------
+
+async function invokeWithFallbacks<T>(
+  primaryFn: () => Promise<T>,
+  fallbackFns: Array<() => Promise<T>>,
+  staticFallback: T,
+): Promise<T> {
+  try {
+    return await primaryFn();
+  } catch {
+    for (const fn of fallbackFns) {
+      try {
+        return await fn();
+      } catch {
+        continue;
+      }
+    }
+    return staticFallback;
+  }
+}
 
 function buildTransactionSummary(transactions: AnonTransaction[]): string {
   if (transactions.length === 0) return 'No transactions available.';

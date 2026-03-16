@@ -24,11 +24,17 @@ function makeConfig(values: Record<string, string | number>): ConfigService {
       if (!(key in values)) throw new Error(`Missing: ${key}`);
       return values[key];
     }),
+    // config.get() returns undefined when key is absent (used for optional fallback keys)
+    get: jest.fn().mockImplementation((key: string) => values[key]),
   } as unknown as ConfigService;
 }
 
 describe('createLlmPair', () => {
   beforeEach(() => jest.clearAllMocks());
+
+  // -------------------------------------------------------------------------
+  // Primary providers
+  // -------------------------------------------------------------------------
 
   describe('anthropic', () => {
     const config = () =>
@@ -139,6 +145,84 @@ describe('createLlmPair', () => {
       expect(() => createLlmPair(config)).toThrow(
         /Unsupported AI_PROVIDER.*mistral/,
       );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Fallback model detection
+  // -------------------------------------------------------------------------
+
+  describe('fallbackModels', () => {
+    it('should include Gemini when GOOGLE_API_KEY is set and provider is not gemini', () => {
+      const config = makeConfig({
+        AI_PROVIDER: 'anthropic',
+        AI_MODEL: 'claude-opus-4-6',
+        ANTHROPIC_API_KEY: 'ant-key',
+        AI_THINKING_BUDGET_TOKENS: 8000,
+        GOOGLE_API_KEY: 'google-key',
+      });
+      const { fallbackModels } = createLlmPair(config);
+      expect(fallbackModels).toHaveLength(1);
+      expect(ChatGoogleGenerativeAI).toHaveBeenCalledWith(
+        expect.objectContaining({
+          apiKey: 'google-key',
+          model: 'gemini-2.0-flash',
+        }),
+      );
+    });
+
+    it('should include Groq when GROQ_API_KEY is set and provider is not groq', () => {
+      const config = makeConfig({
+        AI_PROVIDER: 'anthropic',
+        AI_MODEL: 'claude-opus-4-6',
+        ANTHROPIC_API_KEY: 'ant-key',
+        AI_THINKING_BUDGET_TOKENS: 8000,
+        GROQ_API_KEY: 'groq-key',
+      });
+      const { fallbackModels } = createLlmPair(config);
+      expect(fallbackModels).toHaveLength(1);
+      expect(ChatGroq).toHaveBeenCalledWith(
+        expect.objectContaining({
+          apiKey: 'groq-key',
+          model: 'llama-3.3-70b-versatile',
+        }),
+      );
+    });
+
+    it('should include Gemini first when both keys are set', () => {
+      const config = makeConfig({
+        AI_PROVIDER: 'anthropic',
+        AI_MODEL: 'claude-opus-4-6',
+        ANTHROPIC_API_KEY: 'ant-key',
+        AI_THINKING_BUDGET_TOKENS: 8000,
+        GOOGLE_API_KEY: 'google-key',
+        GROQ_API_KEY: 'groq-key',
+      });
+      const { fallbackModels } = createLlmPair(config);
+      expect(fallbackModels).toHaveLength(2);
+    });
+
+    it('should not include Gemini as fallback when primary is gemini', () => {
+      const config = makeConfig({
+        AI_PROVIDER: 'gemini',
+        AI_MODEL: 'gemini-2.0-flash',
+        GOOGLE_API_KEY: 'google-key',
+        GROQ_API_KEY: 'groq-key',
+      });
+      const { fallbackModels } = createLlmPair(config);
+      // Only Groq should be a fallback, not Gemini itself
+      expect(fallbackModels).toHaveLength(1);
+    });
+
+    it('should return empty fallbackModels when no fallback keys are set', () => {
+      const config = makeConfig({
+        AI_PROVIDER: 'anthropic',
+        AI_MODEL: 'claude-opus-4-6',
+        ANTHROPIC_API_KEY: 'ant-key',
+        AI_THINKING_BUDGET_TOKENS: 8000,
+      });
+      const { fallbackModels } = createLlmPair(config);
+      expect(fallbackModels).toHaveLength(0);
     });
   });
 });

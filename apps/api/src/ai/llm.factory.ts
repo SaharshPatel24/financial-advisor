@@ -13,6 +13,11 @@ export interface LlmPair {
    * Falls back to the standard model for all other providers.
    */
   thinkingModel: BaseChatModel;
+  /**
+   * Ordered list of fallback models built from whichever provider API keys
+   * are present in env. Empty when no fallback keys are configured.
+   */
+  fallbackModels: BaseChatModel[];
 }
 
 /**
@@ -23,6 +28,21 @@ export function createLlmPair(config: ConfigService): LlmPair {
   const provider = config.getOrThrow<string>('AI_PROVIDER');
   const modelName = config.getOrThrow<string>('AI_MODEL');
 
+  const primary = buildPrimary(config, provider, modelName);
+  const fallbackModels = buildFallbackModels(config, provider);
+
+  return { ...primary, fallbackModels };
+}
+
+// ---------------------------------------------------------------------------
+// Private helpers
+// ---------------------------------------------------------------------------
+
+function buildPrimary(
+  config: ConfigService,
+  provider: string,
+  modelName: string,
+): Pick<LlmPair, 'model' | 'thinkingModel'> {
   switch (provider) {
     case 'anthropic': {
       const apiKey = config.getOrThrow<string>('ANTHROPIC_API_KEY');
@@ -62,4 +82,36 @@ export function createLlmPair(config: ConfigService): LlmPair {
         `Unsupported AI_PROVIDER: "${provider}". Valid values: anthropic, openai, groq, gemini`,
       );
   }
+}
+
+/**
+ * Builds an ordered list of fallback models from whichever provider API keys
+ * are available in env — skipping the primary provider.
+ * Order: Gemini → Groq (free tiers first).
+ */
+function buildFallbackModels(
+  config: ConfigService,
+  primaryProvider: string,
+): BaseChatModel[] {
+  const fallbacks: BaseChatModel[] = [];
+
+  if (primaryProvider !== 'gemini') {
+    const key = config.get<string>('GOOGLE_API_KEY');
+    if (key) {
+      fallbacks.push(
+        new ChatGoogleGenerativeAI({ apiKey: key, model: 'gemini-2.0-flash' }),
+      );
+    }
+  }
+
+  if (primaryProvider !== 'groq') {
+    const key = config.get<string>('GROQ_API_KEY');
+    if (key) {
+      fallbacks.push(
+        new ChatGroq({ apiKey: key, model: 'llama-3.3-70b-versatile' }),
+      );
+    }
+  }
+
+  return fallbacks;
 }
