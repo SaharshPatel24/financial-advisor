@@ -2,6 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatGroq } from '@langchain/groq';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { createLlmPair } from './llm.factory';
 
 jest.mock('@langchain/anthropic', () => ({
@@ -12,6 +13,9 @@ jest.mock('@langchain/openai', () => ({
 }));
 jest.mock('@langchain/groq', () => ({
   ChatGroq: jest.fn().mockImplementation(() => ({})),
+}));
+jest.mock('@langchain/google-genai', () => ({
+  ChatGoogleGenerativeAI: jest.fn().mockImplementation(() => ({})),
 }));
 
 function makeConfig(values: Record<string, string | number>): ConfigService {
@@ -95,6 +99,30 @@ describe('createLlmPair', () => {
         expect.objectContaining({
           apiKey: 'groq-key',
           model: 'llama-3.3-70b-versatile',
+        }),
+      );
+    });
+
+    it('should return the same instance for model and thinkingModel', () => {
+      const { model, thinkingModel } = createLlmPair(config());
+      expect(model).toBe(thinkingModel);
+    });
+  });
+
+  describe('gemini', () => {
+    const config = () =>
+      makeConfig({
+        AI_PROVIDER: 'gemini',
+        AI_MODEL: 'gemini-2.0-flash',
+        GOOGLE_API_KEY: 'google-key',
+      });
+
+    it('should create a ChatGoogleGenerativeAI model', () => {
+      createLlmPair(config());
+      expect(ChatGoogleGenerativeAI).toHaveBeenCalledWith(
+        expect.objectContaining({
+          apiKey: 'google-key',
+          model: 'gemini-2.0-flash',
         }),
       );
     });

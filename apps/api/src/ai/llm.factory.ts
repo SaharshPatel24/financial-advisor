@@ -3,6 +3,7 @@ import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatGroq } from '@langchain/groq';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 
 export interface LlmPair {
   /** Standard model — used for categorization and weekly challenges. */
@@ -16,7 +17,7 @@ export interface LlmPair {
 
 /**
  * Creates the appropriate LangChain chat model instances based on AI_PROVIDER.
- * Supported values: "anthropic" | "openai" | "groq"
+ * Supported values: "anthropic" | "openai" | "groq" | "gemini"
  */
 export function createLlmPair(config: ConfigService): LlmPair {
   const provider = config.getOrThrow<string>('AI_PROVIDER');
@@ -50,9 +51,15 @@ export function createLlmPair(config: ConfigService): LlmPair {
       return { model: m, thinkingModel: m };
     }
 
+    case 'gemini': {
+      const apiKey = config.getOrThrow<string>('GOOGLE_API_KEY');
+      const m = new ChatGoogleGenerativeAI({ apiKey, model: modelName });
+      return { model: m, thinkingModel: m };
+    }
+
     default:
       throw new Error(
-        `Unsupported AI_PROVIDER: "${provider}". Valid values: anthropic, openai, groq`,
+        `Unsupported AI_PROVIDER: "${provider}". Valid values: anthropic, openai, groq, gemini`,
       );
   }
 }
