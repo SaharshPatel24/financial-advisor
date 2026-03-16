@@ -8,13 +8,14 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuthStore } from '../store/authStore';
 import { colors } from '../theme';
 
-import LoginScreen          from '../screens/Auth/LoginScreen';
-import RegisterScreen       from '../screens/Auth/RegisterScreen';
-import DashboardScreen      from '../screens/Dashboard/DashboardScreen';
-import TransactionsScreen   from '../screens/Transactions/TransactionsScreen';
+import LoginScreen from '../screens/Auth/LoginScreen';
+import RegisterScreen from '../screens/Auth/RegisterScreen';
+import DashboardScreen from '../screens/Dashboard/DashboardScreen';
+import TransactionsScreen from '../screens/Transactions/TransactionsScreen';
 import AddTransactionScreen from '../screens/Transactions/AddTransactionScreen';
-import GoalsScreen          from '../screens/Goals/GoalsScreen';
-import ChallengeScreen      from '../screens/Challenge/ChallengeScreen';
+import EditTransactionScreen from '../screens/Transactions/EditTransactionScreen';
+import GoalsScreen from '../screens/Goals/GoalsScreen';
+import ChallengeScreen from '../screens/Challenge/ChallengeScreen';
 
 import type { AuthStackParamList, AppTabParamList, AppStackParamList } from './types';
 
@@ -31,13 +32,7 @@ type TabIconProps = {
 };
 
 function TabIcon({ name, focused }: TabIconProps) {
-  return (
-    <Ionicons
-      name={name}
-      size={30}
-      color={focused ? colors.primary : colors.textSecondary}
-    />
-  );
+  return <Ionicons name={name} size={30} color={focused ? colors.primary : colors.textSecondary} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -59,11 +54,11 @@ function AppNavigator() {
   return (
     <AppTabs.Navigator
       screenOptions={{
-        headerShown:     false,
+        headerShown: false,
         tabBarShowLabel: false,
-        tabBarStyle:     styles.tabBar,
+        tabBarStyle: styles.tabBar,
         tabBarItemStyle: styles.tabBarItem,
-        sceneStyle:      { backgroundColor: colors.background },
+        sceneStyle: { backgroundColor: colors.background },
       }}
     >
       <AppTabs.Screen
@@ -118,6 +113,11 @@ function AppRootNavigator() {
         component={AddTransactionScreen}
         options={{ presentation: 'transparentModal' }}
       />
+      <AppStack.Screen
+        name="EditTransaction"
+        component={EditTransactionScreen}
+        options={{ presentation: 'transparentModal' }}
+      />
     </AppStack.Navigator>
   );
 }
@@ -139,21 +139,21 @@ export default function RootNavigator() {
 // ---------------------------------------------------------------------------
 const styles = StyleSheet.create({
   tabBar: {
-    position:       'absolute',
+    position: 'absolute',
     backgroundColor: colors.surface,
-    borderTopWidth:  1,
-    borderTopColor:  colors.border,
-    height:          78,
-    elevation:       8,
-    shadowColor:     '#0f172a',
-    shadowOffset:    { width: 0, height: -2 },
-    shadowOpacity:   0.06,
-    shadowRadius:    8,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    height: 78,
+    elevation: 8,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
   },
   tabBarItem: {
-    paddingTop:     15,
-    flex:           1,
-    alignItems:     'center',
+    paddingTop: 15,
+    flex: 1,
+    alignItems: 'center',
     justifyContent: 'center',
   },
 });

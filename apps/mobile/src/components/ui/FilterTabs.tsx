@@ -38,25 +38,25 @@ export function FilterTabs<T extends string>({ tabs, active, onChange }: Props<T
 
 const styles = StyleSheet.create({
   container: {
-    gap:            spacing['1'] + 1,
-    paddingBottom:  2,
+    gap: spacing['1'] + 1,
+    paddingBottom: 2,
   },
   tab: {
-    paddingVertical:   4,
-    paddingHorizontal: 11,
-    borderRadius:      radius.full,
-    borderWidth:       1.5,
-    borderColor:       colors.border,
-    backgroundColor:   colors.surface,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: radius.full,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   tabActive: {
     backgroundColor: colors.primary,
-    borderColor:     colors.primary,
+    borderColor: colors.primary,
   },
   label: {
-    fontSize:   10,
-    fontWeight: typography.weight.medium,
-    color:      colors.textSecondary,
+    fontSize: 13,
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
   },
   labelActive: {
     color: colors.textInverse,
