@@ -34,15 +34,15 @@ function resolveApiUrl(): string {
   if (__DEV__) {
     console.warn(
       '[api] Using Expo tunnel but EXPO_PUBLIC_API_URL is not set.\n' +
-      'Run: npx localtunnel --port 3000\n' +
-      'Then set EXPO_PUBLIC_API_URL=https://<your-lt-url>/api in apps/mobile/.env',
+        'Run: npx localtunnel --port 3000\n' +
+        'Then set EXPO_PUBLIC_API_URL=https://<your-lt-url>/api in apps/mobile/.env',
     );
   }
 
   return 'http://localhost:3000/api';
 }
 
-const API_URL = resolveApiUrl();
+export const API_URL = resolveApiUrl();
 
 const api = axios.create({
   baseURL: API_URL,
