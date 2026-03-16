@@ -51,6 +51,6 @@ export function scrubDescription(description: string): string {
 // Private helpers
 // ---------------------------------------------------------------------------
 
-function toYearMonth(isoDate: string): string {
-  return isoDate.slice(0, 7); // "YYYY-MM-DD..." → "YYYY-MM"
+function toYearMonth(isoDate: string | Date): string {
+  return new Date(isoDate).toISOString().slice(0, 7); // → "YYYY-MM"
 }
