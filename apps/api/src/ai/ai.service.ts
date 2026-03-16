@@ -44,14 +44,13 @@ export class AiService {
 
   constructor(config: ConfigService) {
     const apiKey = config.getOrThrow<string>('ANTHROPIC_API_KEY');
-    this.model = new ChatAnthropic({
-      apiKey,
-      model: 'claude-opus-4-6',
-    });
+    const model = config.getOrThrow<string>('AI_MODEL');
+    const budgetTokens = config.getOrThrow<number>('AI_THINKING_BUDGET_TOKENS');
+    this.model = new ChatAnthropic({ apiKey, model });
     this.thinkingModel = new ChatAnthropic({
       apiKey,
-      model: 'claude-opus-4-6',
-      thinking: { type: 'enabled', budget_tokens: 8000 },
+      model,
+      thinking: { type: 'enabled', budget_tokens: budgetTokens },
     });
   }
 
