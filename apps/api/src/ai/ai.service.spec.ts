@@ -43,7 +43,14 @@ jest.mock('@langchain/core/output_parsers', () => ({
 }));
 
 const mockConfigService = {
-  getOrThrow: jest.fn().mockReturnValue('test-api-key'),
+  getOrThrow: jest.fn().mockImplementation((key: string) => {
+    const values: Record<string, string | number> = {
+      ANTHROPIC_API_KEY: 'test-api-key',
+      AI_MODEL: 'claude-opus-4-6',
+      AI_THINKING_BUDGET_TOKENS: 8000,
+    };
+    return values[key];
+  }),
 } as unknown as ConfigService;
 
 const mockTransactions: Transaction[] = [
@@ -96,10 +103,17 @@ describe('AiService', () => {
     expect(service).toBeDefined();
   });
 
-  it('should initialise ChatAnthropic with ANTHROPIC_API_KEY', () => {
+  it('should read AI config from env vars', () => {
     expect(mockConfigService.getOrThrow).toHaveBeenCalledWith(
       'ANTHROPIC_API_KEY',
     );
+    expect(mockConfigService.getOrThrow).toHaveBeenCalledWith('AI_MODEL');
+    expect(mockConfigService.getOrThrow).toHaveBeenCalledWith(
+      'AI_THINKING_BUDGET_TOKENS',
+    );
+  });
+
+  it('should initialise standard model from env vars', () => {
     expect(ChatAnthropic).toHaveBeenCalledWith(
       expect.objectContaining({
         apiKey: 'test-api-key',
@@ -108,7 +122,7 @@ describe('AiService', () => {
     );
   });
 
-  it('should create a thinking model with extended thinking enabled', () => {
+  it('should initialise thinking model with budget from env var', () => {
     expect(ChatAnthropic).toHaveBeenCalledWith(
       expect.objectContaining({
         thinking: { type: 'enabled', budget_tokens: 8000 },
