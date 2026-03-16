@@ -1,28 +1,37 @@
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { AiService } from './ai.service';
+import * as llmFactory from './llm.factory';
 import type { Transaction } from '@financial-advisor/shared';
 
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
 
-// Shared invoke spy — assigned in beforeEach so it can be controlled per-test
 let mockInvoke: jest.Mock;
 
-jest.mock('@langchain/anthropic', () => ({
-  ChatAnthropic: jest.fn().mockImplementation(() => ({
-    withStructuredOutput: jest.fn().mockReturnValue({
-      invoke: (...args: unknown[]) => mockInvoke(...args),
-    }),
-    pipe: jest.fn().mockReturnValue({
-      pipe: jest.fn().mockReturnValue({
+// Mock the factory so ai.service.spec stays independent of provider logic
+jest.mock('./llm.factory', () => ({
+  createLlmPair: jest.fn().mockReturnValue({
+    model: {
+      withStructuredOutput: jest.fn().mockReturnValue({
         invoke: (...args: unknown[]) => mockInvoke(...args),
       }),
-    }),
-  })),
+      pipe: jest.fn().mockReturnValue({
+        pipe: jest.fn().mockReturnValue({
+          invoke: (...args: unknown[]) => mockInvoke(...args),
+        }),
+      }),
+    },
+    thinkingModel: {
+      pipe: jest.fn().mockReturnValue({
+        pipe: jest.fn().mockReturnValue({
+          invoke: (...args: unknown[]) => mockInvoke(...args),
+        }),
+      }),
+    },
+  }),
 }));
 
 jest.mock('@langchain/core/prompts', () => ({
@@ -43,14 +52,7 @@ jest.mock('@langchain/core/output_parsers', () => ({
 }));
 
 const mockConfigService = {
-  getOrThrow: jest.fn().mockImplementation((key: string) => {
-    const values: Record<string, string | number> = {
-      ANTHROPIC_API_KEY: 'test-api-key',
-      AI_MODEL: 'claude-opus-4-6',
-      AI_THINKING_BUDGET_TOKENS: 8000,
-    };
-    return values[key];
-  }),
+  getOrThrow: jest.fn(),
 } as unknown as ConfigService;
 
 const mockTransactions: Transaction[] = [
@@ -103,31 +105,8 @@ describe('AiService', () => {
     expect(service).toBeDefined();
   });
 
-  it('should read AI config from env vars', () => {
-    expect(mockConfigService.getOrThrow).toHaveBeenCalledWith(
-      'ANTHROPIC_API_KEY',
-    );
-    expect(mockConfigService.getOrThrow).toHaveBeenCalledWith('AI_MODEL');
-    expect(mockConfigService.getOrThrow).toHaveBeenCalledWith(
-      'AI_THINKING_BUDGET_TOKENS',
-    );
-  });
-
-  it('should initialise standard model from env vars', () => {
-    expect(ChatAnthropic).toHaveBeenCalledWith(
-      expect.objectContaining({
-        apiKey: 'test-api-key',
-        model: 'claude-opus-4-6',
-      }),
-    );
-  });
-
-  it('should initialise thinking model with budget from env var', () => {
-    expect(ChatAnthropic).toHaveBeenCalledWith(
-      expect.objectContaining({
-        thinking: { type: 'enabled', budget_tokens: 8000 },
-      }),
-    );
+  it('should delegate model creation to createLlmPair', () => {
+    expect(llmFactory.createLlmPair).toHaveBeenCalledWith(mockConfigService);
   });
 
   // -------------------------------------------------------------------------

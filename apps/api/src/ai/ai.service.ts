@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ChatAnthropic } from '@langchain/anthropic';
+import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
 import { z } from 'zod';
+import { createLlmPair } from './llm.factory';
 import type {
   CreateGoalDto,
   InsightPeriod,
@@ -39,19 +40,13 @@ type Categorization = z.infer<typeof CategorizationSchema>;
 
 @Injectable()
 export class AiService {
-  private readonly model: ChatAnthropic;
-  private readonly thinkingModel: ChatAnthropic;
+  private readonly model: BaseChatModel;
+  private readonly thinkingModel: BaseChatModel;
 
   constructor(config: ConfigService) {
-    const apiKey = config.getOrThrow<string>('ANTHROPIC_API_KEY');
-    const model = config.getOrThrow<string>('AI_MODEL');
-    const budgetTokens = config.getOrThrow<number>('AI_THINKING_BUDGET_TOKENS');
-    this.model = new ChatAnthropic({ apiKey, model });
-    this.thinkingModel = new ChatAnthropic({
-      apiKey,
-      model,
-      thinking: { type: 'enabled', budget_tokens: budgetTokens },
-    });
+    const { model, thinkingModel } = createLlmPair(config);
+    this.model = model;
+    this.thinkingModel = thinkingModel;
   }
 
   async categorizeTransaction(
