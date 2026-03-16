@@ -12,14 +12,14 @@ type IconConfig = {
 };
 
 const CATEGORY_ICON: Record<TransactionCategory, IconConfig> = {
-  Food:          { bg: '#fef2f2', color: '#ef4444', icon: 'cart-outline' },
-  Transport:     { bg: '#eff6ff', color: '#3b82f6', icon: 'car-outline' },
-  Bills:         { bg: '#fef9ec', color: '#f59e0b', icon: 'document-text-outline' },
+  Food: { bg: '#fef2f2', color: '#ef4444', icon: 'cart-outline' },
+  Transport: { bg: '#eff6ff', color: '#3b82f6', icon: 'car-outline' },
+  Bills: { bg: '#fef9ec', color: '#f59e0b', icon: 'document-text-outline' },
   Entertainment: { bg: '#fdf4ff', color: '#a855f7', icon: 'film-outline' },
-  Shopping:      { bg: '#eef2ff', color: '#6366f1', icon: 'bag-outline' },
-  Health:        { bg: '#ecfdf5', color: '#10b981', icon: 'medkit-outline' },
-  Income:        { bg: '#ecfdf5', color: '#10b981', icon: 'cash-outline' },
-  Other:         { bg: '#f1f5f9', color: '#64748b', icon: 'ellipsis-horizontal-outline' },
+  Shopping: { bg: '#eef2ff', color: '#6366f1', icon: 'bag-outline' },
+  Health: { bg: '#ecfdf5', color: '#10b981', icon: 'medkit-outline' },
+  Income: { bg: '#ecfdf5', color: '#10b981', icon: 'cash-outline' },
+  Other: { bg: '#f1f5f9', color: '#64748b', icon: 'ellipsis-horizontal-outline' },
 };
 
 function formatTime(dateStr: string) {
@@ -42,10 +42,12 @@ export function TransactionRow({ transaction, showTime = true }: Props) {
   return (
     <View style={styles.row}>
       <View style={[styles.iconWrap, { backgroundColor: cfg.bg }]}>
-        <Ionicons name={cfg.icon} size={18} color={cfg.color} />
+        <Ionicons name={cfg.icon} size={24} color={cfg.color} />
       </View>
       <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={1}>{transaction.description}</Text>
+        <Text style={styles.name} numberOfLines={1}>
+          {transaction.description}
+        </Text>
         <CategoryBadge category={transaction.category} />
       </View>
       <View style={styles.right}>
@@ -60,36 +62,37 @@ export function TransactionRow({ transaction, showTime = true }: Props) {
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    gap:               spacing['2'] + 1,
-    paddingVertical:   spacing['2'] + 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing['3'],
+    paddingVertical: spacing['3'] + 2,
     paddingHorizontal: spacing['4'],
-    backgroundColor:   colors.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: '#f8fafc',
   },
   iconWrap: {
-    width:          36,
-    height:         36,
-    borderRadius:   radius.md - 2,
-    alignItems:     'center',
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    alignItems: 'center',
     justifyContent: 'center',
-    flexShrink:     0,
+    flexShrink: 0,
   },
   info: {
     flex: 1,
   },
   name: {
-    fontSize:   typography.size.sm,
+    fontSize: typography.size.base,
     fontWeight: typography.weight.medium,
-    color:      colors.textPrimary,
+    color: colors.textPrimary,
+    marginBottom: 3,
   },
   right: {
     alignItems: 'flex-end',
   },
   amount: {
-    fontSize:   typography.size.sm,
+    fontSize: typography.size.base,
     fontWeight: typography.weight.semibold,
   },
   income: {
@@ -99,8 +102,8 @@ const styles = StyleSheet.create({
     color: colors.expense,
   },
   time: {
-    fontSize:  9,
-    color:     colors.textMuted,
-    marginTop: 2,
+    fontSize: 10,
+    color: colors.textMuted,
+    marginTop: 3,
   },
 });

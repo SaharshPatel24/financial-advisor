@@ -9,10 +9,12 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
+// TouchableOpacity kept for the FAB button
 import { useNavigation } from '@react-navigation/native';
 import { useTransactionStore } from '../../store/transactionStore';
 import { FilterTabs } from '../../components/ui/FilterTabs';
 import { TransactionRow } from '../../components/ui/TransactionRow';
+import { SwipeableRow } from '../../components/ui/SwipeableRow';
 import { colors, spacing, typography } from '../../theme';
 import { strings } from '../../content/strings';
 import type { Transaction, TransactionType } from '@financial-advisor/shared';
@@ -81,22 +83,14 @@ export default function TransactionsScreen() {
     g.items.forEach((tx) => listData.push({ type: 'row', tx, key: tx.id }));
   });
 
-  function handleLongPress(tx: Transaction) {
-    Alert.alert(tx.description, `$${tx.amount} · ${tx.category}`, [
+  function handleDelete(tx: Transaction) {
+    Alert.alert('Delete transaction?', `${tx.description} · $${tx.amount}`, [
+      { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () =>
-          Alert.alert('Delete transaction?', 'This cannot be undone.', [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Delete',
-              style: 'destructive',
-              onPress: () => deleteTransaction(tx.id),
-            },
-          ]),
+        onPress: () => deleteTransaction(tx.id),
       },
-      { text: 'Cancel', style: 'cancel' },
     ]);
   }
 
@@ -106,13 +100,12 @@ export default function TransactionsScreen() {
         return <Text style={styles.groupHeader}>{formatDateGroup(item.date)}</Text>;
       }
       return (
-        <TouchableOpacity
-          onLongPress={() => handleLongPress(item.tx)}
-          delayLongPress={400}
-          activeOpacity={1}
+        <SwipeableRow
+          onEdit={() => navigation.navigate('EditTransaction', { transaction: item.tx })}
+          onDelete={() => handleDelete(item.tx)}
         >
           <TransactionRow transaction={item.tx} showTime />
-        </TouchableOpacity>
+        </SwipeableRow>
       );
     },
     [transactions],
@@ -168,14 +161,14 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.surface,
     paddingHorizontal: spacing['4'],
-    paddingTop: spacing['2'] + 2,
-    paddingBottom: spacing['3'],
+    paddingTop: spacing['3'],
+    paddingBottom: spacing['3'] + 2,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    gap: spacing['2'],
+    gap: spacing['2'] + 2,
   },
   title: {
-    fontSize: 21,
+    fontSize: 26,
     fontWeight: typography.weight.bold,
     color: colors.textPrimary,
   },
