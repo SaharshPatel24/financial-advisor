@@ -55,7 +55,10 @@ export class ChatAgentService {
       if (chunk.event === 'on_tool_end') {
         yield {
           type: 'tool_result',
-          data: { tool: chunk.name ?? '', result: chunk.data?.output },
+          data: {
+            tool: chunk.name ?? '',
+            result: extractToolOutput(chunk.data?.output),
+          },
         };
       }
     }
@@ -72,6 +75,22 @@ function buildSystemPrompt(userName: string): string {
 You have access to ${userName}'s real financial data via tools — always use tools to answer questions, never guess numbers.
 Be concise, specific, and cite actual amounts from the data.
 Never reveal raw IDs or internal fields. If data is unavailable, say so honestly.`;
+}
+
+function extractToolOutput(output: unknown): unknown {
+  if (output === null || output === undefined) return null;
+  // LangChain ToolMessage — extract the string content
+  if (typeof output === 'object' && 'content' in (output as object)) {
+    const content = (output as { content: unknown }).content;
+    if (typeof content === 'string') {
+      try {
+        return JSON.parse(content);
+      } catch {
+        return content;
+      }
+    }
+  }
+  return output;
 }
 
 function extractToken(content: unknown): string | null {
