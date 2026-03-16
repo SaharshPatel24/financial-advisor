@@ -115,58 +115,6 @@ describe('AiService', () => {
   });
 
   // -------------------------------------------------------------------------
-  // categorizeTransaction
-  // -------------------------------------------------------------------------
-
-  describe('categorizeTransaction', () => {
-    it('should return category and confidence from primary model', async () => {
-      const service = await buildService();
-      mockInvoke.mockResolvedValue({ category: 'Food', confidence: 0.92 });
-
-      const result = await service.categorizeTransaction(
-        'Grocery store',
-        50,
-        'EXPENSE',
-      );
-
-      expect(mockInvoke).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'EXPENSE',
-          categories: expect.any(String),
-        }),
-      );
-      expect(result).toEqual({ category: 'Food', confidence: 0.92 });
-    });
-
-    it('should use fallback model when primary fails', async () => {
-      const fallback = makeMockModel(() => mockFallbackInvoke);
-      const service = await buildService([fallback]);
-      mockInvoke.mockRejectedValue(new Error('API error'));
-      mockFallbackInvoke.mockResolvedValue({
-        category: 'Transport',
-        confidence: 0.7,
-      });
-
-      const result = await service.categorizeTransaction('Uber', 15, 'EXPENSE');
-
-      expect(result).toEqual({ category: 'Transport', confidence: 0.7 });
-    });
-
-    it('should return static fallback when all models fail', async () => {
-      const service = await buildService();
-      mockInvoke.mockRejectedValue(new Error('API error'));
-
-      const result = await service.categorizeTransaction(
-        'Unknown',
-        10,
-        'EXPENSE',
-      );
-
-      expect(result).toEqual({ category: 'Other', confidence: 0 });
-    });
-  });
-
-  // -------------------------------------------------------------------------
   // generateInsights
   // -------------------------------------------------------------------------
 

@@ -1,51 +1,24 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
-import { z } from 'zod';
 import { createLlmPair } from './llm.factory';
 import type {
   CreateGoalDto,
   InsightPeriod,
   Transaction,
-  TransactionCategory,
-  TransactionType,
 } from '@financial-advisor/shared';
-import {
-  anonGoal,
-  anonTransactions,
-  scrubDescription,
-  type AnonTransaction,
-} from './anonymizer';
-
-const TRANSACTION_CATEGORIES: [TransactionCategory, ...TransactionCategory[]] =
-  [
-    'Food',
-    'Transport',
-    'Bills',
-    'Entertainment',
-    'Shopping',
-    'Health',
-    'Income',
-    'Other',
-  ];
-
-const CategorizationSchema = z.object({
-  category: z.enum(TRANSACTION_CATEGORIES),
-  confidence: z.number().min(0).max(1),
-});
-
-type Categorization = z.infer<typeof CategorizationSchema>;
+import { anonGoal, anonTransactions, type AnonTransaction } from './anonymizer';
 
 const STATIC_FALLBACKS = {
-  categorization: { category: 'Other' as TransactionCategory, confidence: 0 },
   text: 'Our AI advisor is temporarily unavailable. Please try again shortly.',
   challenge: 'Save at least $10 this week as a starting point.',
 } as const;
 
 @Injectable()
 export class AiService {
+  private readonly logger = new Logger(AiService.name);
   private readonly model: BaseChatModel;
   private readonly thinkingModel: BaseChatModel;
   private readonly fallbackModels: BaseChatModel[];
@@ -55,42 +28,6 @@ export class AiService {
     this.model = model;
     this.thinkingModel = thinkingModel;
     this.fallbackModels = fallbackModels;
-  }
-
-  async categorizeTransaction(
-    description: string,
-    amount: number,
-    type: TransactionType,
-  ): Promise<Categorization> {
-    const safeDescription = scrubDescription(description);
-    const prompt = ChatPromptTemplate.fromTemplate(
-      `Categorize this transaction:
-Description: {description}
-Amount: $${amount}
-Type: {type}
-
-Choose from: {categories}.
-Return a confidence score between 0 and 1.`,
-    );
-    const vars = {
-      description: safeDescription,
-      type,
-      categories: TRANSACTION_CATEGORIES.join(', '),
-    };
-
-    return invokeWithFallbacks(
-      () =>
-        prompt
-          .pipe(this.model.withStructuredOutput(CategorizationSchema))
-          .invoke(vars),
-      this.fallbackModels.map(
-        (f) => () =>
-          prompt
-            .pipe(f.withStructuredOutput(CategorizationSchema))
-            .invoke(vars),
-      ),
-      STATIC_FALLBACKS.categorization,
-    );
   }
 
   async generateInsights(
@@ -113,6 +50,8 @@ Transaction summary:
         (f) => () => prompt.pipe(f).pipe(parser).invoke(vars),
       ),
       STATIC_FALLBACKS.text,
+      this.logger,
+      'generateInsights',
     );
   }
 
@@ -149,6 +88,8 @@ Recent spending:
         (f) => () => prompt.pipe(f).pipe(parser).invoke(vars),
       ),
       STATIC_FALLBACKS.text,
+      this.logger,
+      'generateGoalRecommendation',
     );
   }
 
@@ -178,6 +119,8 @@ Return exactly one sentence starting with "Spend less than", "Save at least", or
         (f) => () => prompt.pipe(f).pipe(parser).invoke(vars),
       ),
       STATIC_FALLBACKS.challenge,
+      this.logger,
+      'generateWeeklyChallenge',
     );
   }
 }
@@ -190,17 +133,27 @@ async function invokeWithFallbacks<T>(
   primaryFn: () => Promise<T>,
   fallbackFns: Array<() => Promise<T>>,
   staticFallback: T,
+  logger: Logger,
+  method: string,
 ): Promise<T> {
   try {
     return await primaryFn();
-  } catch {
+  } catch (err) {
+    logger.warn(
+      `[${method}] primary failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
     for (const fn of fallbackFns) {
       try {
         return await fn();
-      } catch {
-        continue;
+      } catch (fbErr) {
+        logger.warn(
+          `[${method}] fallback failed: ${fbErr instanceof Error ? fbErr.message : String(fbErr)}`,
+        );
       }
     }
+    logger.error(
+      `[${method}] all providers failed — returning static fallback`,
+    );
     return staticFallback;
   }
 }
