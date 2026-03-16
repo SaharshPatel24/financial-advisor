@@ -6,6 +6,7 @@ import {
   IsString,
   MinLength,
 } from 'class-validator';
+import { TransactionCategory } from '@prisma/client';
 
 export class UpdateTransactionDto {
   @IsOptional()
@@ -23,17 +24,8 @@ export class UpdateTransactionDto {
   type?: 'INCOME' | 'EXPENSE';
 
   @IsOptional()
-  @IsEnum([
-    'Food',
-    'Transport',
-    'Bills',
-    'Entertainment',
-    'Shopping',
-    'Health',
-    'Income',
-    'Other',
-  ])
-  category?: string;
+  @IsEnum(TransactionCategory)
+  category?: TransactionCategory;
 
   @IsOptional()
   @IsString()
