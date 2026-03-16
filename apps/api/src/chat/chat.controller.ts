@@ -22,7 +22,7 @@ interface AuthRequest {
 }
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/chat')
+@Controller('chat')
 export class ChatController {
   constructor(private readonly chat: ChatService) {}
 
