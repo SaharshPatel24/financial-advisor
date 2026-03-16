@@ -16,6 +16,7 @@ export type AuthStackParamList = {
 export type AppTabParamList = {
   Dashboard: undefined;
   Transactions: undefined;
+  FinaAI: undefined;
   Goals: undefined;
   Challenge: undefined;
 };
