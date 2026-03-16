@@ -1,9 +1,10 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 
 import { useAuthStore } from '../store/authStore';
 import { colors } from '../theme';
@@ -16,6 +17,7 @@ import AddTransactionScreen from '../screens/Transactions/AddTransactionScreen';
 import EditTransactionScreen from '../screens/Transactions/EditTransactionScreen';
 import GoalsScreen from '../screens/Goals/GoalsScreen';
 import ChallengeScreen from '../screens/Challenge/ChallengeScreen';
+import ChatScreen from '../screens/Chat/ChatScreen';
 
 import type { AuthStackParamList, AppTabParamList, AppStackParamList } from './types';
 
@@ -34,6 +36,61 @@ type TabIconProps = {
 function TabIcon({ name, focused }: TabIconProps) {
   return <Ionicons name={name} size={30} color={focused ? colors.primary : colors.textSecondary} />;
 }
+
+// ---------------------------------------------------------------------------
+// Center Fina AI FAB tab button
+// ---------------------------------------------------------------------------
+function FinaAITabButton({ onPress, accessibilityState }: BottomTabBarButtonProps) {
+  const focused = accessibilityState?.selected ?? false;
+  return (
+    <View style={fab.wrapper}>
+      <TouchableOpacity
+        onPress={onPress}
+        activeOpacity={0.85}
+        style={[fab.circle, focused && fab.circleFocused]}
+      >
+        <Ionicons name="sparkles" size={22} color={colors.textInverse} />
+      </TouchableOpacity>
+      <Text style={[fab.label, focused && fab.labelFocused]}>Fina AI</Text>
+    </View>
+  );
+}
+
+const fab = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    marginTop: -18,
+    gap: 3,
+  },
+  circle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 4,
+    borderColor: colors.surface,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  circleFocused: {
+    backgroundColor: colors.primaryDark,
+  },
+  label: {
+    fontSize: 9,
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  labelFocused: {
+    color: colors.primaryDark,
+  },
+});
 
 // ---------------------------------------------------------------------------
 // Auth navigator
@@ -77,6 +134,13 @@ function AppNavigator() {
           tabBarIcon: ({ focused }) => (
             <TabIcon name={focused ? 'card' : 'card-outline'} focused={focused} />
           ),
+        }}
+      />
+      <AppTabs.Screen
+        name="FinaAI"
+        component={ChatScreen}
+        options={{
+          tabBarButton: (props) => <FinaAITabButton {...props} />,
         }}
       />
       <AppTabs.Screen
