@@ -99,7 +99,7 @@ function buildFallbackModels(
     const key = config.get<string>('GOOGLE_API_KEY');
     if (key) {
       fallbacks.push(
-        new ChatGoogleGenerativeAI({ apiKey: key, model: 'gemini-2.0-flash' }),
+        new ChatGoogleGenerativeAI({ apiKey: key, model: 'gemini-1.5-flash' }),
       );
     }
   }
