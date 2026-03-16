@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { PrismaService } from '../prisma/prisma.service';
@@ -26,12 +26,16 @@ export interface CategorySummary {
 
 @Injectable()
 export class ChatToolsService {
+  private readonly logger = new Logger(ChatToolsService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async getTransactions(
     userId: string,
     args: { from?: string; to?: string; category?: string; limit?: number },
   ): Promise<AnonTransaction[]> {
+    this.logger.log(`getTransactions called — args: ${JSON.stringify(args)}`);
+
     const rows = await this.prisma.transaction.findMany({
       where: {
         userId,
@@ -39,8 +43,8 @@ export class ChatToolsService {
         ...(args.from || args.to
           ? {
               date: {
-                ...(args.from ? { gte: new Date(args.from) } : {}),
-                ...(args.to ? { lte: new Date(args.to) } : {}),
+                ...(args.from ? { gte: startOfDay(args.from) } : {}),
+                ...(args.to ? { lte: endOfDay(args.to) } : {}),
               },
             }
           : {}),
@@ -49,20 +53,30 @@ export class ChatToolsService {
       take: args.limit ?? 50,
     });
 
+    this.logger.log(`getTransactions result — ${rows.length} rows`);
+
     return rows.map((t) => ({
       amount: t.amount,
       type: t.type,
       category: t.category,
-      date: t.date.toISOString().split('T')[0]!,
+      // Shift back 12 h so transactions entered late evening in western
+      // timezones (stored as next-day UTC) display with the correct local date.
+      date: new Date(t.date.getTime() - 12 * 60 * 60 * 1000)
+        .toISOString()
+        .split('T')[0]!,
       description: t.description,
     }));
   }
 
   async getGoals(userId: string): Promise<AnonGoal[]> {
+    this.logger.log(`getGoals called — userId: ${userId}`);
+
     const rows = await this.prisma.goal.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
     });
+
+    this.logger.log(`getGoals result — ${rows.length} rows`);
 
     return rows.map((g) => ({
       description: g.description,
@@ -76,6 +90,8 @@ export class ChatToolsService {
     userId: string,
     args: { period: 'weekly' | 'monthly' },
   ): Promise<CategorySummary[]> {
+    this.logger.log(`getSpendingSummary called — period: ${args.period}`);
+
     const now = new Date();
     const from =
       args.period === 'weekly'
@@ -102,13 +118,13 @@ export class ChatToolsService {
     }));
   }
 
-  async getActiveChallenge(
-    userId: string,
-  ): Promise<{
+  async getActiveChallenge(userId: string): Promise<{
     description: string;
     weekStart: string;
     weekEnd: string;
   } | null> {
+    this.logger.log(`getActiveChallenge called — userId: ${userId}`);
+
     const challenge = await this.prisma.challenge.findFirst({
       where: { userId, status: 'ACTIVE' },
       orderBy: { weekStart: 'desc' },
@@ -164,8 +180,17 @@ export function buildTools(
           .optional()
           .describe('Max records to return'),
       }),
-      func: (args) =>
-        service.getTransactions(userId, args).then((r) => JSON.stringify(r)),
+      func: (raw) => {
+        const args = parseArgs<{
+          from?: string;
+          to?: string;
+          category?: string;
+          limit?: number;
+        }>(raw);
+        return service
+          .getTransactions(userId, args)
+          .then((r) => JSON.stringify(r));
+      },
     }),
 
     new DynamicStructuredTool({
@@ -184,8 +209,12 @@ export function buildTools(
           .enum(['weekly', 'monthly'])
           .describe('weekly = last 7 days, monthly = current calendar month'),
       }),
-      func: (args) =>
-        service.getSpendingSummary(userId, args).then((r) => JSON.stringify(r)),
+      func: (raw) => {
+        const args = parseArgs<{ period: 'weekly' | 'monthly' }>(raw);
+        return service
+          .getSpendingSummary(userId, args)
+          .then((r) => JSON.stringify(r));
+      },
     }),
 
     new DynamicStructuredTool({
@@ -196,4 +225,43 @@ export function buildTools(
         service.getActiveChallenge(userId).then((r) => JSON.stringify(r)),
     }),
   ];
+}
+
+// ---------------------------------------------------------------------------
+// Module-private helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Some models (e.g. Gemini) call tools with a legacy single-string format:
+ *   { input: '{"from":"...","category":"Food"}' }
+ * instead of a structured object. This helper unwraps that string so the
+ * actual filter args are always available regardless of model.
+ */
+function parseArgs<T extends object>(raw: unknown): T {
+  if (raw && typeof raw === 'object' && 'input' in raw) {
+    const inputVal = (raw as { input: unknown }).input;
+    if (typeof inputVal === 'string') {
+      try {
+        return JSON.parse(inputVal) as T;
+      } catch {
+        // fall through — return raw
+      }
+    }
+  }
+  return raw as T;
+}
+
+function startOfDay(dateStr: string): Date {
+  const d = new Date(dateStr);
+  d.setUTCHours(0, 0, 0, 0);
+  return d;
+}
+
+function endOfDay(dateStr: string): Date {
+  // Extend 12 h past UTC midnight to cover UTC-12 (westernmost) timezone:
+  // a transaction recorded at e.g. 8 pm EST (UTC-5) on date X is stored as
+  // X+1T01:00Z — without this buffer those rows would be missed.
+  const d = new Date(dateStr);
+  d.setUTCHours(35, 59, 59, 999); // 23 + 12 = 35 → rolls to next day 11:59:59 Z
+  return d;
 }
