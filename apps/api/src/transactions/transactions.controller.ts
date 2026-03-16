@@ -1,8 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
+  Patch,
   Post,
   Query,
   Request,
@@ -11,6 +14,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { GetTransactionsQueryDto } from './dto/get-transactions-query.dto';
+import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { TransactionsService } from './transactions.service';
 
 interface AuthRequest {
@@ -38,5 +42,20 @@ export class TransactionsController {
   @Get(':id')
   findOne(@Request() req: AuthRequest, @Param('id') id: string) {
     return this.transactions.findOne(req.user.id, id);
+  }
+
+  @Patch(':id')
+  update(
+    @Request() req: AuthRequest,
+    @Param('id') id: string,
+    @Body() dto: UpdateTransactionDto,
+  ) {
+    return this.transactions.update(req.user.id, id, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  delete(@Request() req: AuthRequest, @Param('id') id: string) {
+    return this.transactions.delete(req.user.id, id);
   }
 }

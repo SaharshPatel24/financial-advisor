@@ -5,6 +5,7 @@ import { AiService } from '../ai/ai.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { GetTransactionsQueryDto } from './dto/get-transactions-query.dto';
+import { UpdateTransactionDto } from './dto/update-transaction.dto';
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
@@ -80,6 +81,30 @@ export class TransactionsService {
 
     if (!transaction) throw new NotFoundException('Transaction not found');
     return transaction;
+  }
+
+  async update(
+    userId: string,
+    id: string,
+    dto: UpdateTransactionDto,
+  ): Promise<Transaction> {
+    await this.findOne(userId, id);
+
+    return this.prisma.transaction.update({
+      where: { id },
+      data: {
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.amount !== undefined && { amount: dto.amount }),
+        ...(dto.type !== undefined && { type: dto.type }),
+        ...(dto.category !== undefined && { category: dto.category }),
+        ...(dto.date !== undefined && { date: new Date(dto.date) }),
+      },
+    });
+  }
+
+  async delete(userId: string, id: string): Promise<void> {
+    await this.findOne(userId, id);
+    await this.prisma.transaction.delete({ where: { id } });
   }
 }
 
