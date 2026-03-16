@@ -1,6 +1,5 @@
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { AiService } from './ai.service';
 import * as llmFactory from './llm.factory';
 import type { Transaction } from '@financial-advisor/shared';
@@ -10,39 +9,39 @@ import type { Transaction } from '@financial-advisor/shared';
 // ---------------------------------------------------------------------------
 
 let mockInvoke: jest.Mock;
+let mockFallbackInvoke: jest.Mock;
 
-// Mock the factory so ai.service.spec stays independent of provider logic
-jest.mock('./llm.factory', () => ({
-  createLlmPair: jest.fn().mockReturnValue({
-    model: {
-      withStructuredOutput: jest.fn().mockReturnValue({
-        invoke: (...args: unknown[]) => mockInvoke(...args),
-      }),
+/**
+ * Builds a mock model whose invoke routes through the provided spy.
+ * prompt.pipe(model) returns the model itself (see ChatPromptTemplate mock below),
+ * so model.pipe(parser).invoke() and model.withStructuredOutput().invoke() both
+ * call through to the spy.
+ */
+function makeMockModel(spy: () => jest.Mock) {
+  return {
+    withStructuredOutput: jest.fn().mockReturnValue({
+      invoke: (...args: unknown[]) => spy()(...args),
+    }),
+    pipe: jest.fn().mockReturnValue({
+      invoke: (...args: unknown[]) => spy()(...args),
       pipe: jest.fn().mockReturnValue({
-        pipe: jest.fn().mockReturnValue({
-          invoke: (...args: unknown[]) => mockInvoke(...args),
-        }),
+        invoke: (...args: unknown[]) => spy()(...args),
       }),
-    },
-    thinkingModel: {
-      pipe: jest.fn().mockReturnValue({
-        pipe: jest.fn().mockReturnValue({
-          invoke: (...args: unknown[]) => mockInvoke(...args),
-        }),
-      }),
-    },
-  }),
-}));
+    }),
+  };
+}
 
+jest.mock('./llm.factory', () => ({ createLlmPair: jest.fn() }));
+
+/**
+ * Make prompt.pipe(runnable) return the runnable directly so that
+ * prompt.pipe(model.withStructuredOutput(schema)) delegates to the correct
+ * model's invoke — primary or fallback.
+ */
 jest.mock('@langchain/core/prompts', () => ({
   ChatPromptTemplate: {
     fromTemplate: jest.fn().mockReturnValue({
-      pipe: jest.fn().mockReturnValue({
-        pipe: jest.fn().mockReturnValue({
-          invoke: (...args: unknown[]) => mockInvoke(...args),
-        }),
-        invoke: (...args: unknown[]) => mockInvoke(...args),
-      }),
+      pipe: jest.fn().mockImplementation((runnable: any) => runnable),
     }),
   },
 }));
@@ -51,9 +50,7 @@ jest.mock('@langchain/core/output_parsers', () => ({
   StringOutputParser: jest.fn().mockImplementation(() => ({})),
 }));
 
-const mockConfigService = {
-  getOrThrow: jest.fn(),
-} as unknown as ConfigService;
+const mockConfigService = { getOrThrow: jest.fn() } as unknown as ConfigService;
 
 const mockTransactions: Transaction[] = [
   {
@@ -80,32 +77,40 @@ const mockTransactions: Transaction[] = [
   },
 ];
 
+async function buildService(
+  fallbackModels: unknown[] = [],
+): Promise<AiService> {
+  (llmFactory.createLlmPair as jest.Mock).mockReturnValue({
+    model: makeMockModel(() => mockInvoke),
+    thinkingModel: makeMockModel(() => mockInvoke),
+    fallbackModels,
+  });
+  const module: TestingModule = await Test.createTestingModule({
+    providers: [
+      AiService,
+      { provide: ConfigService, useValue: mockConfigService },
+    ],
+  }).compile();
+  return module.get<AiService>(AiService);
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe('AiService', () => {
-  let service: AiService;
-
-  beforeEach(async () => {
+  beforeEach(() => {
     jest.clearAllMocks();
     mockInvoke = jest.fn();
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AiService,
-        { provide: ConfigService, useValue: mockConfigService },
-      ],
-    }).compile();
-
-    service = module.get<AiService>(AiService);
+    mockFallbackInvoke = jest.fn();
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
+  it('should be defined', async () => {
+    expect(await buildService()).toBeDefined();
   });
 
-  it('should delegate model creation to createLlmPair', () => {
+  it('should delegate model creation to createLlmPair', async () => {
+    await buildService();
     expect(llmFactory.createLlmPair).toHaveBeenCalledWith(mockConfigService);
   });
 
@@ -114,9 +119,9 @@ describe('AiService', () => {
   // -------------------------------------------------------------------------
 
   describe('categorizeTransaction', () => {
-    it('should invoke the structured output chain and return category + confidence', async () => {
-      const mockResult = { category: 'Food', confidence: 0.92 };
-      mockInvoke.mockResolvedValue(mockResult);
+    it('should return category and confidence from primary model', async () => {
+      const service = await buildService();
+      mockInvoke.mockResolvedValue({ category: 'Food', confidence: 0.92 });
 
       const result = await service.categorizeTransaction(
         'Grocery store',
@@ -126,12 +131,38 @@ describe('AiService', () => {
 
       expect(mockInvoke).toHaveBeenCalledWith(
         expect.objectContaining({
-          description: expect.any(String),
           type: 'EXPENSE',
           categories: expect.any(String),
         }),
       );
-      expect(result).toEqual(mockResult);
+      expect(result).toEqual({ category: 'Food', confidence: 0.92 });
+    });
+
+    it('should use fallback model when primary fails', async () => {
+      const fallback = makeMockModel(() => mockFallbackInvoke);
+      const service = await buildService([fallback]);
+      mockInvoke.mockRejectedValue(new Error('API error'));
+      mockFallbackInvoke.mockResolvedValue({
+        category: 'Transport',
+        confidence: 0.7,
+      });
+
+      const result = await service.categorizeTransaction('Uber', 15, 'EXPENSE');
+
+      expect(result).toEqual({ category: 'Transport', confidence: 0.7 });
+    });
+
+    it('should return static fallback when all models fail', async () => {
+      const service = await buildService();
+      mockInvoke.mockRejectedValue(new Error('API error'));
+
+      const result = await service.categorizeTransaction(
+        'Unknown',
+        10,
+        'EXPENSE',
+      );
+
+      expect(result).toEqual({ category: 'Other', confidence: 0 });
     });
   });
 
@@ -141,6 +172,7 @@ describe('AiService', () => {
 
   describe('generateInsights', () => {
     it('should invoke the text chain and return plain text', async () => {
+      const service = await buildService();
       mockInvoke.mockResolvedValue('You spend too much on food.');
 
       const result = await service.generateInsights(mockTransactions, 'weekly');
@@ -155,6 +187,7 @@ describe('AiService', () => {
     });
 
     it('should pass "No transactions available." in summary for empty list', async () => {
+      const service = await buildService();
       mockInvoke.mockResolvedValue('No data available.');
 
       await service.generateInsights([], 'monthly');
@@ -162,6 +195,26 @@ describe('AiService', () => {
       expect(mockInvoke).toHaveBeenCalledWith(
         expect.objectContaining({ summary: 'No transactions available.' }),
       );
+    });
+
+    it('should use fallback model when primary fails', async () => {
+      const fallback = makeMockModel(() => mockFallbackInvoke);
+      const service = await buildService([fallback]);
+      mockInvoke.mockRejectedValue(new Error('API error'));
+      mockFallbackInvoke.mockResolvedValue('Fallback insight.');
+
+      const result = await service.generateInsights(mockTransactions, 'weekly');
+
+      expect(result).toBe('Fallback insight.');
+    });
+
+    it('should return static fallback when all models fail', async () => {
+      const service = await buildService();
+      mockInvoke.mockRejectedValue(new Error('API error'));
+
+      const result = await service.generateInsights([], 'weekly');
+
+      expect(result).toMatch(/temporarily unavailable/i);
     });
   });
 
@@ -171,23 +224,23 @@ describe('AiService', () => {
 
   describe('generateGoalRecommendation', () => {
     it('should invoke chain and return recommendation text', async () => {
+      const service = await buildService();
       mockInvoke.mockResolvedValue('Cut dining out by 20%.');
 
-      const goal = {
-        description: 'Save for vacation',
-        targetAmount: 2000,
-        deadline: '2025-12-31',
-      };
       const result = await service.generateGoalRecommendation(
-        goal,
+        {
+          description: 'Save for vacation',
+          targetAmount: 2000,
+          deadline: '2025-12-31',
+        },
         mockTransactions,
       );
 
-      expect(mockInvoke).toHaveBeenCalled();
       expect(result).toBe('Cut dining out by 20%.');
     });
 
     it('should pass empty deadlineLine when deadline is not provided', async () => {
+      const service = await buildService();
       mockInvoke.mockResolvedValue('Advice.');
 
       await service.generateGoalRecommendation(
@@ -201,6 +254,7 @@ describe('AiService', () => {
     });
 
     it('should pass deadlineLine when deadline is provided', async () => {
+      const service = await buildService();
       mockInvoke.mockResolvedValue('Advice.');
 
       // deadline is truncated to YYYY-MM by the anonymizer
@@ -217,6 +271,18 @@ describe('AiService', () => {
         expect.objectContaining({ deadlineLine: 'Deadline: 2025-06' }),
       );
     });
+
+    it('should return static fallback when all models fail', async () => {
+      const service = await buildService();
+      mockInvoke.mockRejectedValue(new Error('API error'));
+
+      const result = await service.generateGoalRecommendation(
+        { description: 'savings goal', targetAmount: 500 },
+        [],
+      );
+
+      expect(result).toMatch(/temporarily unavailable/i);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -225,29 +291,44 @@ describe('AiService', () => {
 
   describe('generateWeeklyChallenge', () => {
     it('should invoke chain and return challenge text', async () => {
+      const service = await buildService();
       mockInvoke.mockResolvedValue('Spend less than $60 on Food this week.');
 
-      const weekStart = new Date('2025-01-06');
-      const weekEnd = new Date('2025-01-12');
       const result = await service.generateWeeklyChallenge(
         mockTransactions,
-        weekStart,
-        weekEnd,
+        new Date('2025-01-06'),
+        new Date('2025-01-12'),
       );
 
       expect(result).toBe('Spend less than $60 on Food this week.');
     });
 
     it('should include date range in chain invocation', async () => {
+      const service = await buildService();
       mockInvoke.mockResolvedValue('Save at least $50.');
 
-      const weekStart = new Date('2025-03-10');
-      const weekEnd = new Date('2025-03-16');
-      await service.generateWeeklyChallenge([], weekStart, weekEnd);
+      await service.generateWeeklyChallenge(
+        [],
+        new Date('2025-03-10'),
+        new Date('2025-03-16'),
+      );
 
       expect(mockInvoke).toHaveBeenCalledWith(
         expect.objectContaining({ from: '2025-03-10', to: '2025-03-16' }),
       );
+    });
+
+    it('should return static fallback when all models fail', async () => {
+      const service = await buildService();
+      mockInvoke.mockRejectedValue(new Error('API error'));
+
+      const result = await service.generateWeeklyChallenge(
+        [],
+        new Date('2025-01-06'),
+        new Date('2025-01-12'),
+      );
+
+      expect(result).toMatch(/save at least \$10/i);
     });
   });
 });
