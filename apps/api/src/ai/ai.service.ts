@@ -30,6 +30,10 @@ export class AiService {
     this.fallbackModels = fallbackModels;
   }
 
+  getModel(): BaseChatModel {
+    return this.model;
+  }
+
   async generateInsights(
     transactions: Transaction[],
     period: InsightPeriod,
