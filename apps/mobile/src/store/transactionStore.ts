@@ -1,6 +1,20 @@
 import { create } from 'zustand';
-import type { Transaction, CreateTransactionDto, PaginatedTransactions, TransactionType } from '@financial-advisor/shared';
+import type {
+  Transaction,
+  CreateTransactionDto,
+  PaginatedTransactions,
+  TransactionType,
+  TransactionCategory,
+} from '@financial-advisor/shared';
 import api from '../services/api';
+
+interface UpdateTransactionDto {
+  description?: string;
+  amount?: number;
+  type?: TransactionType;
+  category?: TransactionCategory;
+  date?: string;
+}
 
 interface TransactionState {
   transactions: Transaction[];
@@ -9,6 +23,8 @@ interface TransactionState {
   loading: boolean;
   fetchTransactions: (type?: TransactionType, reset?: boolean) => Promise<void>;
   createTransaction: (dto: CreateTransactionDto) => Promise<Transaction>;
+  updateTransaction: (id: string, dto: UpdateTransactionDto) => Promise<Transaction>;
+  deleteTransaction: (id: string) => Promise<void>;
 }
 
 export const useTransactionStore = create<TransactionState>()((set, get) => ({
@@ -39,5 +55,21 @@ export const useTransactionStore = create<TransactionState>()((set, get) => ({
     const { data } = await api.post<Transaction>('/transactions', dto);
     set((s) => ({ transactions: [data, ...s.transactions], total: s.total + 1 }));
     return data;
+  },
+
+  updateTransaction: async (id, dto) => {
+    const { data } = await api.patch<Transaction>(`/transactions/${id}`, dto);
+    set((s) => ({
+      transactions: s.transactions.map((t) => (t.id === id ? data : t)),
+    }));
+    return data;
+  },
+
+  deleteTransaction: async (id) => {
+    await api.delete(`/transactions/${id}`);
+    set((s) => ({
+      transactions: s.transactions.filter((t) => t.id !== id),
+      total: s.total - 1,
+    }));
   },
 }));
