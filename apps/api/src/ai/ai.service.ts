@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import Anthropic from '@anthropic-ai/sdk';
-import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
+import { ChatAnthropic } from '@langchain/anthropic';
+import { ChatPromptTemplate } from '@langchain/core/prompts';
+import { StringOutputParser } from '@langchain/core/output_parsers';
 import { z } from 'zod';
 import type {
   CreateGoalDto,
@@ -38,12 +39,19 @@ type Categorization = z.infer<typeof CategorizationSchema>;
 
 @Injectable()
 export class AiService {
-  private readonly client: Anthropic;
-  private readonly model = 'claude-opus-4-6';
+  private readonly model: ChatAnthropic;
+  private readonly thinkingModel: ChatAnthropic;
 
   constructor(config: ConfigService) {
-    this.client = new Anthropic({
-      apiKey: config.getOrThrow<string>('ANTHROPIC_API_KEY'),
+    const apiKey = config.getOrThrow<string>('ANTHROPIC_API_KEY');
+    this.model = new ChatAnthropic({
+      apiKey,
+      model: 'claude-opus-4-6',
+    });
+    this.thinkingModel = new ChatAnthropic({
+      apiKey,
+      model: 'claude-opus-4-6',
+      thinking: { type: 'enabled', budget_tokens: 8000 },
     });
   }
 
@@ -53,27 +61,24 @@ export class AiService {
     type: TransactionType,
   ): Promise<Categorization> {
     const safeDescription = scrubDescription(description);
-    const response = await this.client.messages.parse({
-      model: this.model,
-      max_tokens: 256,
-      messages: [
-        {
-          role: 'user',
-          content: `Categorize this transaction:
-Description: ${safeDescription}
+    const prompt = ChatPromptTemplate.fromTemplate(
+      `Categorize this transaction:
+Description: {description}
 Amount: $${amount}
-Type: ${type}
+Type: {type}
 
-Choose from: ${TRANSACTION_CATEGORIES.join(', ')}.
+Choose from: {categories}.
 Return a confidence score between 0 and 1.`,
-        },
-      ],
-      output_config: {
-        format: zodOutputFormat(CategorizationSchema),
-      },
-    });
+    );
 
-    return response.parsed_output!;
+    const chain = prompt.pipe(
+      this.model.withStructuredOutput(CategorizationSchema),
+    );
+    return chain.invoke({
+      description: safeDescription,
+      type,
+      categories: TRANSACTION_CATEGORIES.join(', '),
+    });
   }
 
   async generateInsights(
@@ -81,23 +86,17 @@ Return a confidence score between 0 and 1.`,
     period: InsightPeriod,
   ): Promise<string> {
     const safeTxs = anonTransactions(transactions);
-    const stream = this.client.messages.stream({
-      model: this.model,
-      max_tokens: 1024,
-      thinking: { type: 'adaptive' },
-      messages: [
-        {
-          role: 'user',
-          content: `You are a personal finance advisor. Analyze the following ${period} transactions and provide 2-3 actionable insights in under 200 words.
+    const prompt = ChatPromptTemplate.fromTemplate(
+      `You are a personal finance advisor. Analyze the following {period} transactions and provide 2-3 actionable insights in under 200 words.
 
 Transaction summary:
-${buildTransactionSummary(safeTxs)}`,
-        },
-      ],
-    });
+{summary}`,
+    );
 
-    const message = await stream.finalMessage();
-    return extractText(message.content);
+    const chain = prompt
+      .pipe(this.thinkingModel)
+      .pipe(new StringOutputParser());
+    return chain.invoke({ period, summary: buildTransactionSummary(safeTxs) });
   }
 
   async generateGoalRecommendation(
@@ -110,27 +109,25 @@ ${buildTransactionSummary(safeTxs)}`,
       ? `Deadline: ${safeGoal.deadline}`
       : '';
 
-    const stream = this.client.messages.stream({
-      model: this.model,
-      max_tokens: 512,
-      thinking: { type: 'adaptive' },
-      messages: [
-        {
-          role: 'user',
-          content: `You are a personal finance advisor. Given this savings goal and recent spending, provide a concrete recommendation in 2-3 sentences.
+    const prompt = ChatPromptTemplate.fromTemplate(
+      `You are a personal finance advisor. Given this savings goal and recent spending, provide a concrete recommendation in 2-3 sentences.
 
-Goal: ${safeGoal.description}
-Target: $${safeGoal.targetAmount}
-${deadlineLine}
+Goal: {goalDescription}
+Target: ${safeGoal.targetAmount}
+{deadlineLine}
 
 Recent spending:
-${buildTransactionSummary(safeTxs)}`,
-        },
-      ],
-    });
+{summary}`,
+    );
 
-    const message = await stream.finalMessage();
-    return extractText(message.content);
+    const chain = prompt
+      .pipe(this.thinkingModel)
+      .pipe(new StringOutputParser());
+    return chain.invoke({
+      goalDescription: safeGoal.description,
+      deadlineLine,
+      summary: buildTransactionSummary(safeTxs),
+    });
   }
 
   async generateWeeklyChallenge(
@@ -142,23 +139,21 @@ ${buildTransactionSummary(safeTxs)}`,
     const from = weekStart.toISOString().split('T')[0];
     const to = weekEnd.toISOString().split('T')[0];
 
-    const response = await this.client.messages.create({
-      model: this.model,
-      max_tokens: 256,
-      messages: [
-        {
-          role: 'user',
-          content: `You are a personal finance coach. Based on this user's recent spending, generate one specific, achievable weekly challenge for ${from} to ${to}.
+    const prompt = ChatPromptTemplate.fromTemplate(
+      `You are a personal finance coach. Based on this user's recent spending, generate one specific, achievable weekly challenge for {from} to {to}.
 
 Recent spending:
-${buildTransactionSummary(safeTxs)}
+{summary}
 
 Return exactly one sentence starting with "Spend less than", "Save at least", or "Limit your". Use specific dollar amounts from the data.`,
-        },
-      ],
-    });
+    );
 
-    return extractText(response.content);
+    const chain = prompt.pipe(this.model).pipe(new StringOutputParser());
+    return chain.invoke({
+      from,
+      to,
+      summary: buildTransactionSummary(safeTxs),
+    });
   }
 }
 
@@ -184,11 +179,4 @@ function buildTransactionSummary(transactions: AnonTransaction[]): string {
         `- ${cat}: $${total.toFixed(2)} (${count} tx)`,
     )
     .join('\n');
-}
-
-function extractText(content: Anthropic.ContentBlock[]): string {
-  return content
-    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-    .map((b) => b.text)
-    .join('');
 }
