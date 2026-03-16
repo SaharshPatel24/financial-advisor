@@ -8,3 +8,4 @@ export * from './transaction.types';
 export * from './goal.types';
 export * from './insight.types';
 export * from './challenge.types';
+export * from './chat.types';
