@@ -103,7 +103,7 @@ describe('ChatController', () => {
 
   describe('sendMessage (SSE)', () => {
     function makeRes() {
-      return { write: jest.fn(), end: jest.fn() };
+      return { write: jest.fn(), end: jest.fn(), flushHeaders: jest.fn() };
     }
 
     async function* fakeStream(events: object[]) {
