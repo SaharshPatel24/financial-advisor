@@ -1,18 +1,21 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
   FlatList,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useChatStore } from '../../store/chatStore';
-import { colors } from '../../theme';
+import { useAuthStore } from '../../store/authStore';
+import { useTransactionStore } from '../../store/transactionStore';
+import { useGoalsStore } from '../../store/goalsStore';
+import { colors, typography, spacing } from '../../theme';
 import MessageBubble from '../../components/chat/MessageBubble';
 import StreamingBubble from '../../components/chat/StreamingBubble';
 import ToolCallIndicator from '../../components/chat/ToolCallIndicator';
@@ -20,62 +23,140 @@ import ChatInput from '../../components/chat/ChatInput';
 import type { ChatMessageDto } from '@financial-advisor/shared';
 
 // ---------------------------------------------------------------------------
-// Suggestion chips shown on the welcome / empty state
+// Context bar — shows quick financial stats in the header
 // ---------------------------------------------------------------------------
-const WELCOME_CHIPS = [
-  'How am I doing this month?',
-  'What did I spend on food?',
-  'Show my goals',
-  'Check my challenge',
-];
+const ContextBar = React.memo(function ContextBar() {
+  const transactions = useTransactionStore((s) => s.transactions);
+  const goals = useGoalsStore((s) => s.goals);
 
-const SUGGESTION_CHIPS = [
-  'How am I doing?',
-  'Biggest expense this week?',
-  'Am I on track for my goals?',
-  'Show my challenge',
-];
+  const { monthlySpent, monthlyIncome } = useMemo(() => {
+    const now = new Date();
+    const month = now.getMonth();
+    const year = now.getFullYear();
+    let spent = 0;
+    let income = 0;
+    for (const t of transactions) {
+      const d = new Date(t.date);
+      if (d.getMonth() !== month || d.getFullYear() !== year) continue;
+      if (t.type === 'EXPENSE') spent += t.amount;
+      else if (t.type === 'INCOME') income += t.amount;
+    }
+    return { monthlySpent: spent, monthlyIncome: income };
+  }, [transactions]);
+
+  const formatAmt = (n: number) => (n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n.toFixed(0)}`);
+
+  return (
+    <View style={ctxStyles.bar}>
+      <View style={ctxStyles.pill}>
+        <Text style={ctxStyles.label}>Spent</Text>
+        <Text style={[ctxStyles.value, ctxStyles.red]}>{formatAmt(monthlySpent)}</Text>
+      </View>
+      <View style={ctxStyles.divider} />
+      <View style={ctxStyles.pill}>
+        <Text style={ctxStyles.label}>Income</Text>
+        <Text style={[ctxStyles.value, ctxStyles.green]}>{formatAmt(monthlyIncome)}</Text>
+      </View>
+      <View style={ctxStyles.divider} />
+      <View style={ctxStyles.pill}>
+        <Text style={ctxStyles.label}>Goals</Text>
+        <Text style={[ctxStyles.value, goals.length > 0 ? ctxStyles.green : ctxStyles.neutral]}>
+          {goals.length} active
+        </Text>
+      </View>
+    </View>
+  );
+});
+
+const ctxStyles = StyleSheet.create({
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  pill: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+  },
+  divider: {
+    width: 5,
+  },
+  label: {
+    fontSize: typography.size.xs,
+    color: colors.textMuted,
+    marginBottom: 1,
+  },
+  value: {
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.bold,
+  },
+  red: { color: colors.danger },
+  green: { color: colors.success },
+  neutral: { color: colors.textPrimary },
+});
 
 // ---------------------------------------------------------------------------
 // Welcome state shown when session has no messages
 // ---------------------------------------------------------------------------
-function WelcomeState({ onChipPress }: { onChipPress: (text: string) => void }) {
+const WELCOME_ACTIONS = [
+  {
+    icon: 'receipt-outline' as const,
+    iconBg: colors.dangerSubtle,
+    iconColor: colors.danger,
+    label: 'Add a transaction',
+    sub: 'Log income or expense',
+  },
+  {
+    icon: 'flag-outline' as const,
+    iconBg: colors.successSubtle,
+    iconColor: colors.success,
+    label: 'Create a goal',
+    sub: 'Plan & track savings',
+  },
+  {
+    icon: 'trending-up-outline' as const,
+    iconBg: colors.primarySubtle,
+    iconColor: colors.primary,
+    label: 'Spending breakdown',
+    sub: 'Where did my money go?',
+  },
+  {
+    icon: 'trophy-outline' as const,
+    iconBg: colors.warningSubtle,
+    iconColor: colors.warning,
+    label: 'Weekly challenge',
+    sub: 'AI-generated goal',
+  },
+];
+
+function WelcomeState() {
+  const user = useAuthStore((s) => s.user);
+  const firstName = user?.name?.split(' ')[0] ?? null;
+
   return (
     <View style={welcome.container}>
       <View style={welcome.circle}>
         <Ionicons name="sparkles" size={28} color={colors.textInverse} />
       </View>
-      <Text style={welcome.title}>I'm Fina, your AI money agent</Text>
-      <Text style={welcome.sub}>
-        Tell me what you need — I'll look up your real data and help you out.
+      <Text style={welcome.title}>
+        {firstName ? `Hey ${firstName}, I'm Fina` : "Hey, I'm Fina"}
       </Text>
+      <Text style={welcome.sub}>Your AI money agent. Tell me what you need — I'll handle it.</Text>
       <View style={welcome.grid}>
-        {[
-          {
-            icon: 'receipt-outline' as const,
-            label: 'Spending breakdown',
-            sub: 'Where did my money go?',
-          },
-          { icon: 'flag-outline' as const, label: 'Goal check-in', sub: 'Am I on track?' },
-          {
-            icon: 'trending-up-outline' as const,
-            label: 'Monthly summary',
-            sub: 'Income vs expenses',
-          },
-          { icon: 'trophy-outline' as const, label: 'Weekly challenge', sub: 'See my progress' },
-        ].map((item) => (
-          <TouchableOpacity
-            key={item.label}
-            style={welcome.card}
-            onPress={() => onChipPress(item.label)}
-            activeOpacity={0.7}
-          >
-            <View style={welcome.cardIcon}>
-              <Ionicons name={item.icon} size={16} color={colors.primary} />
+        {WELCOME_ACTIONS.map((item) => (
+          <View key={item.label} style={welcome.card}>
+            <View style={[welcome.cardIcon, { backgroundColor: item.iconBg }]}>
+              <Ionicons name={item.icon} size={16} color={item.iconColor} />
             </View>
             <Text style={welcome.cardLabel}>{item.label}</Text>
             <Text style={welcome.cardSub}>{item.sub}</Text>
-          </TouchableOpacity>
+          </View>
         ))}
       </View>
     </View>
@@ -104,18 +185,18 @@ const welcome = StyleSheet.create({
     elevation: 8,
   },
   title: {
-    fontSize: 18,
+    fontSize: typography.size.lg,
     fontWeight: '700',
     color: colors.textPrimary,
     textAlign: 'center',
     marginTop: 4,
   },
   sub: {
-    fontSize: 13,
+    fontSize: typography.size.base,
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 19,
-    maxWidth: 260,
+    lineHeight: 22,
+    maxWidth: 270,
   },
   grid: {
     flexDirection: 'row',
@@ -136,19 +217,18 @@ const welcome = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 8,
-    backgroundColor: colors.primarySubtle,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
   },
   cardLabel: {
-    fontSize: 11,
+    fontSize: typography.size.sm,
     fontWeight: '600',
     color: colors.textPrimary,
-    lineHeight: 15,
+    lineHeight: 18,
   },
   cardSub: {
-    fontSize: 10,
+    fontSize: typography.size.xs,
     color: colors.textMuted,
     marginTop: 2,
   },
@@ -160,70 +240,68 @@ const welcome = StyleSheet.create({
 function ChatHeader({ onNewChat }: { onNewChat: () => void }) {
   return (
     <View style={header.container}>
-      <View style={header.left}>
-        <View style={header.avatar}>
-          <Ionicons name="sparkles" size={16} color={colors.textInverse} />
-          <View style={header.onlineDot} />
+      <View style={header.titleRow}>
+        <View style={header.titleLeft}>
+          <Text style={header.title}>Fina AI</Text>
+          <View style={header.onlinePill}>
+            <View style={header.onlineDot} />
+            <Text style={header.onlineLabel}>Online</Text>
+          </View>
         </View>
-        <View>
-          <Text style={header.name}>Fina AI</Text>
-          <Text style={header.status}>Online · ready to help</Text>
-        </View>
+        <TouchableOpacity onPress={onNewChat} activeOpacity={0.7} style={header.newBtn}>
+          <Ionicons name="create-outline" size={22} color={colors.textSecondary} />
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity onPress={onNewChat} activeOpacity={0.7} style={header.newBtn}>
-        <Ionicons name="create-outline" size={20} color={colors.textSecondary} />
-      </TouchableOpacity>
+      <ContextBar />
     </View>
   );
 }
 
 const header = StyleSheet.create({
   container: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing['4'],
+    paddingTop: spacing['3'],
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: 10,
+  },
+  titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
-  left: {
+  titleLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
-  avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  onlineDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.success,
-    borderWidth: 2,
-    borderColor: colors.surface,
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-  },
-  name: {
-    fontSize: 15,
-    fontWeight: '700',
+  title: {
+    fontSize: 26,
+    fontWeight: typography.weight.bold,
     color: colors.textPrimary,
     letterSpacing: -0.3,
   },
-  status: {
-    fontSize: 11,
+  onlinePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.successSubtle,
+    borderRadius: spacing['4'],
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  onlineDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.success,
+  },
+  onlineLabel: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.semibold,
     color: colors.success,
-    fontWeight: '500',
-    marginTop: 1,
   },
   newBtn: {
     padding: 4,
@@ -234,6 +312,7 @@ const header = StyleSheet.create({
 // Main screen
 // ---------------------------------------------------------------------------
 export default function ChatScreen() {
+  const tabBarHeight = useBottomTabBarHeight();
   const activeSession = useChatStore((s) => s.activeSession);
   const streamingContent = useChatStore((s) => s.streamingContent);
   const isStreaming = useChatStore((s) => s.isStreaming);
@@ -242,8 +321,6 @@ export default function ChatScreen() {
   const openSession = useChatStore((s) => s.openSession);
   const resetActiveSession = useChatStore((s) => s.resetActiveSession);
   const sendMessage = useChatStore((s) => s.sendMessage);
-  const sessions = useChatStore((s) => s.sessions);
-
   const listRef = useRef<FlatList<ChatMessageDto>>(null);
 
   // On mount: load sessions and open the most recent one
@@ -275,10 +352,8 @@ export default function ChatScreen() {
     resetActiveSession();
   }
 
-  const chips = hasMessages ? SUGGESTION_CHIPS : WELCOME_CHIPS;
-
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top']} style={[styles.safeArea, { paddingBottom: tabBarHeight }]}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -306,29 +381,9 @@ export default function ChatScreen() {
           />
         ) : (
           <View style={styles.flex}>
-            <WelcomeState onChipPress={handleSend} />
+            <WelcomeState />
           </View>
         )}
-
-        {/* Suggestion chips */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.chipsScroll}
-          contentContainerStyle={styles.chipsContent}
-        >
-          {chips.map((chip) => (
-            <TouchableOpacity
-              key={chip}
-              style={styles.chip}
-              onPress={() => handleSend(chip)}
-              activeOpacity={0.7}
-              disabled={isStreaming}
-            >
-              <Text style={styles.chipText}>{chip}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
 
         <ChatInput onSend={handleSend} disabled={isStreaming} />
       </KeyboardAvoidingView>
@@ -355,30 +410,5 @@ const styles = StyleSheet.create({
   streamingFooter: {
     gap: 6,
     marginTop: 10,
-  },
-  chipsScroll: {
-    flexShrink: 0,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  chipsContent: {
-    flexDirection: 'row',
-    gap: 7,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  chip: {
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  chipText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.textPrimary,
   },
 });

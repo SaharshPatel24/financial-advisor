@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../../theme';
+import { colors, typography } from '../../theme';
 
 const TOOL_LABELS: Record<string, string> = {
   get_transactions: 'Looking up your transactions...',
@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.success,
   },
   label: {
-    fontSize: 11,
+    fontSize: typography.size.sm,
     color: colors.textSecondary,
   },
 });

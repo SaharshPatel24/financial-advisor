@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ChatMessageDto } from '@financial-advisor/shared';
-import { colors } from '../../theme';
+import { colors, typography } from '../../theme';
 
 interface Props {
   message: ChatMessageDto;
@@ -46,8 +46,8 @@ const styles = StyleSheet.create({
   },
   userText: {
     color: colors.textInverse,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: typography.size.base,
+    lineHeight: 22,
   },
   aiRow: {
     flexDirection: 'row',
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
   },
   aiText: {
     color: colors.textPrimary,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: typography.size.base,
+    lineHeight: 22,
   },
 });

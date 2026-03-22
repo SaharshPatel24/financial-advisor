@@ -32,51 +32,64 @@ function getToken(): string {
 }
 
 // ---------------------------------------------------------------------------
-// SSE stream helper
+// SSE stream via XHR — React Native's fetch doesn't truly stream;
+// XHR onprogress fires as each chunk arrives, giving real-time tokens.
 // ---------------------------------------------------------------------------
-async function* streamEvents(
+function streamEventsXHR(
   sessionId: string,
   content: string,
   token: string,
-): AsyncGenerator<ChatStreamEvent> {
-  const res = await fetch(`${API_URL}/chat/sessions/${sessionId}/messages`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ content }),
-  });
+  onEvent: (event: ChatStreamEvent) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_URL}/chat/sessions/${sessionId}/messages`);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
 
-  if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+    let processedLen = 0;
+    let buffer = '';
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
+    function processChunk() {
+      const raw = xhr.responseText;
+      const newText = raw.slice(processedLen);
+      processedLen = raw.length;
+      if (!newText) return;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const parts = buffer.split('\n\n');
-    buffer = parts.pop() ?? '';
+      buffer += newText;
+      // SSE events are separated by double newline
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop() ?? ''; // last part may be incomplete — keep in buffer
 
-    for (const part of parts) {
-      let eventType = '';
-      let dataStr = '';
-      for (const line of part.split('\n')) {
-        if (line.startsWith('event: ')) eventType = line.slice(7).trim();
-        if (line.startsWith('data: ')) dataStr = line.slice(6).trim();
-      }
-      if (eventType && dataStr) {
-        try {
-          yield { type: eventType, data: JSON.parse(dataStr) } as ChatStreamEvent;
-        } catch {
-          // ignore malformed events
+      for (const part of parts) {
+        if (!part.trim()) continue;
+        let eventType = '';
+        let dataStr = '';
+        for (const line of part.split('\n')) {
+          if (line.startsWith('event: ')) eventType = line.slice(7).trim();
+          if (line.startsWith('data: ')) dataStr = line.slice(6).trim();
+        }
+        if (eventType && dataStr) {
+          try {
+            onEvent({ type: eventType, data: JSON.parse(dataStr) } as ChatStreamEvent);
+          } catch {
+            // ignore malformed events
+          }
         }
       }
     }
-  }
+
+    xhr.timeout = 60_000;
+    xhr.onprogress = () => processChunk();
+    xhr.onload = () => {
+      processChunk(); // flush any remaining data
+      resolve();
+    };
+    xhr.onerror = () => reject(new Error('Network error'));
+    xhr.ontimeout = () => reject(new Error('Request timed out'));
+
+    xhr.send(JSON.stringify({ content }));
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -151,7 +164,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     let doneMessageId = '';
 
     try {
-      for await (const event of streamEvents(activeSession.id, content, token)) {
+      await streamEventsXHR(activeSession.id, content, token, (event) => {
         if (event.type === 'token') {
           fullContent += event.data.content;
           set({ streamingContent: fullContent });
@@ -162,9 +175,12 @@ export const useChatStore = create<ChatState>()((set, get) => ({
         } else if (event.type === 'done') {
           doneMessageId = event.data.messageId;
         }
-      }
+      });
+    } catch {
+      // stream failed — fall through to session reload below
     } finally {
       if (fullContent) {
+        // Streaming worked — commit the accumulated message locally
         const aiMsg: ChatMessageDto = {
           id: doneMessageId || `ai-${Date.now()}`,
           role: 'assistant',
@@ -180,7 +196,12 @@ export const useChatStore = create<ChatState>()((set, get) => ({
           activeToolCall: null,
         }));
       } else {
+        // Streaming didn't deliver tokens (e.g. Vercel buffering or redirect issue).
+        // Reload the session from the API so the saved response appears immediately.
         set({ isStreaming: false, streamingContent: '', activeToolCall: null });
+        await get()
+          .openSession(activeSession.id)
+          .catch(() => {});
       }
     }
   },
