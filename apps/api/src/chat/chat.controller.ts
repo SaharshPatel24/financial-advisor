@@ -51,12 +51,17 @@ export class ChatController {
   @Header('Content-Type', 'text/event-stream')
   @Header('Cache-Control', 'no-cache')
   @Header('Connection', 'keep-alive')
+  @Header('X-Accel-Buffering', 'no')
   async sendMessage(
     @Request() req: AuthRequest,
     @Param('id') id: string,
     @Body() dto: SendMessageDto,
     @Res() res: Response,
   ): Promise<void> {
+    // Flush headers immediately so the client sees the SSE stream open
+    // before the first token arrives (critical for Vercel's proxy layer).
+    res.flushHeaders();
+
     try {
       for await (const event of this.chat.streamMessage(
         req.user.id,
