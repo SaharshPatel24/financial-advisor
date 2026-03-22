@@ -1,19 +1,19 @@
 import React, { useEffect, useMemo } from 'react';
-import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, SafeAreaView,
-} from 'react-native';
-import { useAuthStore }        from '../../store/authStore';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useNavigation } from '@react-navigation/native';
+import { useAuthStore } from '../../store/authStore';
 import { useTransactionStore } from '../../store/transactionStore';
-import { useInsightStore }     from '../../store/insightStore';
-import { BalanceCard }         from '../../components/ui/BalanceCard';
-import { SpendingChart }       from '../../components/ui/SpendingChart';
-import { InsightCard }         from '../../components/ui/InsightCard';
-import { TransactionRow }      from '../../components/ui/TransactionRow';
-import { SectionHeader }       from '../../components/ui/SectionHeader';
+import { useInsightStore } from '../../store/insightStore';
+import { BalanceCard } from '../../components/ui/BalanceCard';
+import { SpendingChart } from '../../components/ui/SpendingChart';
+import { InsightCard } from '../../components/ui/InsightCard';
+import { TransactionRow } from '../../components/ui/TransactionRow';
+import { SectionHeader } from '../../components/ui/SectionHeader';
 import { colors, spacing, typography, radius } from '../../theme';
 import { strings } from '../../content/strings';
 import type { AppTabNavProp } from '../../navigation/types';
-import { useNavigation } from '@react-navigation/native';
 
 function greeting() {
   const h = new Date().getHours();
@@ -24,17 +24,25 @@ function greeting() {
 
 function formatDate() {
   return new Date().toLocaleDateString('en-US', {
-    weekday: 'long', month: 'long', day: 'numeric',
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
   });
 }
 
 function initials(name?: string | null) {
   if (!name) return 'U';
-  return name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+  return name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 export default function DashboardScreen() {
   const navigation = useNavigation<AppTabNavProp>();
+  const tabBarHeight = useBottomTabBarHeight();
   const user = useAuthStore((s) => s.user);
   const { transactions, fetchTransactions } = useTransactionStore();
   const { weeklyInsight, fetchWeeklyInsight } = useInsightStore();
@@ -46,7 +54,7 @@ export default function DashboardScreen() {
 
   const { income, spent } = useMemo(() => {
     let income = 0;
-    let spent  = 0;
+    let spent = 0;
     transactions.forEach((t) => {
       if (t.type === 'INCOME') income += t.amount;
       else spent += t.amount;
@@ -57,15 +65,18 @@ export default function DashboardScreen() {
   const recentTx = transactions.slice(0, 3);
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={['top']} style={[styles.safe, { paddingBottom: tabBarHeight }]}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>{greeting()}, {user?.name ?? 'there'}</Text>
-          <Text style={styles.date}>{formatDate()}</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.greeting}>{greeting()},</Text>
+          <Text style={styles.name}>{user?.name?.split(' ')[0] ?? 'there'}</Text>
         </View>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials(user?.name)}</Text>
+        <View>
+          <Text style={styles.date}>{formatDate()}</Text>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initials(user?.name)}</Text>
+          </View>
         </View>
       </View>
 
@@ -74,20 +85,11 @@ export default function DashboardScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <BalanceCard
-          netBalance={income - spent}
-          income={income}
-          spent={spent}
-        />
+        <BalanceCard netBalance={income - spent} income={income} spent={spent} />
 
         <SpendingChart />
 
-        {weeklyInsight && (
-          <InsightCard text={weeklyInsight.summary} />
-        )}
-        {!weeklyInsight && (
-          <InsightCard text={strings.dashboard.insightsEmpty} />
-        )}
+        <InsightCard text={weeklyInsight?.summary ?? strings.dashboard.insightsEmpty} />
 
         <SectionHeader
           title={strings.dashboard.recentActivity}
@@ -105,7 +107,6 @@ export default function DashboardScreen() {
           <Text style={styles.empty}>No transactions yet.</Text>
         )}
 
-        {/* bottom padding for floating tab bar */}
         <View style={styles.bottomPad} />
       </ScrollView>
     </SafeAreaView>
@@ -114,63 +115,76 @@ export default function DashboardScreen() {
 
 const styles = StyleSheet.create({
   safe: {
-    flex:            1,
-    backgroundColor: colors.surface,
+    flex: 1,
+    backgroundColor: colors.background,
   },
   header: {
-    flexDirection:   'row',
-    justifyContent:  'space-between',
-    alignItems:      'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
     paddingHorizontal: spacing['4'],
-    paddingVertical: spacing['2'],
+    paddingTop: spacing['3'],
+    paddingBottom: 14,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 5,
+  },
   greeting: {
-    fontSize:   19,
+    fontSize: typography.size.base,
+    color: colors.textSecondary,
+  },
+  name: {
+    fontSize: 26,
     fontWeight: typography.weight.bold,
-    color:      colors.textPrimary,
+    color: colors.textPrimary,
+    letterSpacing: -0.3,
   },
   date: {
-    fontSize:  11,
-    color:     colors.textMuted,
-    marginTop: 1,
+    fontSize: typography.size.xs,
+    color: colors.textMuted,
+    textAlign: 'right',
+    marginBottom: 6,
   },
   avatar: {
-    width:           34,
-    height:          34,
-    borderRadius:    17,
-    backgroundColor: '#eef2ff',
-    alignItems:      'center',
-    justifyContent:  'center',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primarySubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-end',
   },
   avatarText: {
-    fontSize:   12,
+    fontSize: typography.size.sm,
     fontWeight: typography.weight.semibold,
-    color:      '#4f46e5',
+    color: colors.primary,
   },
   scroll: {
-    flex:            1,
+    flex: 1,
     backgroundColor: colors.background,
   },
   content: {
-    padding: spacing['3'] + 1,
+    padding: spacing['4'],
   },
   txCard: {
     backgroundColor: colors.surface,
-    borderWidth:     1,
-    borderColor:     colors.border,
-    borderRadius:    radius.md + 1,
-    overflow:        'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
   },
   empty: {
-    fontSize:  typography.size.sm,
-    color:     colors.textMuted,
+    fontSize: typography.size.sm,
+    color: colors.textMuted,
     textAlign: 'center',
     paddingVertical: spacing['4'],
   },
   bottomPad: {
-    height: 100,
+    height: 24,
   },
 });

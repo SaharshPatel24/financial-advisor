@@ -13,15 +13,21 @@ export function BalanceCard({ netBalance, income, spent, period = 'This month' }
   return (
     <View style={styles.card}>
       <Text style={styles.label}>Net balance · {period}</Text>
-      <Text style={styles.amount}>${netBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>
+      <Text style={styles.amount}>
+        ${netBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+      </Text>
       <View style={styles.row}>
         <View style={styles.stat}>
           <Text style={styles.statLabel}>Income</Text>
-          <Text style={styles.statValue}>${income.toLocaleString('en-US', { minimumFractionDigits: 0 })}</Text>
+          <Text style={styles.statValue}>
+            ${income.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+          </Text>
         </View>
         <View style={styles.stat}>
           <Text style={styles.statLabel}>Spent</Text>
-          <Text style={styles.statValue}>${spent.toLocaleString('en-US', { minimumFractionDigits: 0 })}</Text>
+          <Text style={styles.statValue}>
+            ${spent.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+          </Text>
         </View>
       </View>
     </View>
@@ -31,40 +37,40 @@ export function BalanceCard({ netBalance, income, spent, period = 'This month' }
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.primary,
-    borderRadius:    radius.lg,
-    padding:         spacing['4'] - 2,
-    marginBottom:    spacing['3'],
+    borderRadius: radius.lg,
+    padding: spacing['4'],
+    marginBottom: spacing['3'],
   },
   label: {
-    fontSize:     10,
-    color:        'rgba(255,255,255,0.7)',
-    marginBottom: 3,
+    fontSize: typography.size.xs,
+    color: 'rgba(255,255,255,0.7)',
+    marginBottom: 4,
   },
   amount: {
-    fontSize:     26,
-    fontWeight:   typography.weight.bold,
-    color:        colors.textInverse,
+    fontSize: 32,
+    fontWeight: typography.weight.bold,
+    color: colors.textInverse,
     letterSpacing: -0.5,
-    marginBottom: spacing['2'] + 2,
+    marginBottom: spacing['3'],
   },
   row: {
     flexDirection: 'row',
-    gap:           spacing['2'] + 2,
+    gap: spacing['2'],
   },
   stat: {
-    flex:            1,
+    flex: 1,
     backgroundColor: 'rgba(255,255,255,0.18)',
-    borderRadius:    radius.md - 2,
-    padding:         7,
+    borderRadius: radius.md,
+    padding: spacing['2'],
   },
   statLabel: {
-    fontSize:     10,
-    color:        'rgba(255,255,255,0.7)',
+    fontSize: typography.size.xs,
+    color: 'rgba(255,255,255,0.7)',
     marginBottom: 2,
   },
   statValue: {
-    fontSize:   13,
+    fontSize: typography.size.base,
     fontWeight: typography.weight.bold,
-    color:      colors.textInverse,
+    color: colors.textInverse,
   },
 });
