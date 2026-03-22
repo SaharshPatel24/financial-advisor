@@ -11,7 +11,7 @@ export function InsightCard({ text }: Props) {
   return (
     <View style={styles.card}>
       <View style={styles.iconWrap}>
-        <Ionicons name="sparkles" size={13} color={colors.textInverse} />
+        <Ionicons name="sparkles" size={14} color={colors.textInverse} />
       </View>
       <View style={styles.content}>
         <Text style={styles.title}>AI Insights</Text>
@@ -23,35 +23,35 @@ export function InsightCard({ text }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#eef2ff',
-    borderRadius:    radius.md,
-    padding:         11,
-    flexDirection:   'row',
-    gap:             spacing['2'] + 1,
-    marginBottom:    spacing['3'],
-    alignItems:      'flex-start',
+    backgroundColor: colors.primarySubtle,
+    borderRadius: radius.lg,
+    padding: spacing['3'],
+    flexDirection: 'row',
+    gap: spacing['3'],
+    marginBottom: spacing['3'],
+    alignItems: 'flex-start',
   },
   iconWrap: {
-    width:           26,
-    height:          26,
+    width: 30,
+    height: 30,
     backgroundColor: colors.primary,
-    borderRadius:    7,
-    alignItems:      'center',
-    justifyContent:  'center',
-    flexShrink:      0,
+    borderRadius: radius.sm + 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   content: {
     flex: 1,
   },
   title: {
-    fontSize:     10,
-    fontWeight:   typography.weight.semibold,
-    color:        '#3730a3',
-    marginBottom: 2,
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.semibold,
+    color: colors.primaryDark,
+    marginBottom: 3,
   },
   body: {
-    fontSize:   10,
-    color:      '#4f46e5',
-    lineHeight: 14,
+    fontSize: typography.size.sm,
+    color: colors.primary,
+    lineHeight: 18,
   },
 });
