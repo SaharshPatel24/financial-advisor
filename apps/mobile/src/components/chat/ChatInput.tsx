@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../theme';
+import { colors, typography } from '../../theme';
 
 interface Props {
   onSend: (content: string) => void;
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     paddingHorizontal: 14,
     paddingVertical: 9,
-    fontSize: 14,
+    fontSize: typography.size.base,
     color: colors.textPrimary,
     maxHeight: 100,
   },
