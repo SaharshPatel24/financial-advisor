@@ -9,6 +9,7 @@ import { GoalsModule } from './goals/goals.module';
 import { InsightsModule } from './insights/insights.module';
 import { ChallengesModule } from './challenges/challenges.module';
 import { ChatModule } from './chat/chat.module';
+import { SplitwiseModule } from './splitwise/splitwise.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ChatModule } from './chat/chat.module';
     InsightsModule,
     ChallengesModule,
     ChatModule,
+    SplitwiseModule,
   ],
 })
 export class AppModule {}
