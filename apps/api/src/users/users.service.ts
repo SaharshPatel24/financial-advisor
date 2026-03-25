@@ -21,4 +21,18 @@ export class UsersService {
   }): Promise<User> {
     return this.prisma.user.create({ data });
   }
+
+  async saveSplitwiseApiKey(id: string, apiKey: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id },
+      data: { splitwiseApiKey: apiKey },
+    });
+  }
+
+  async clearSplitwiseApiKey(id: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id },
+      data: { splitwiseApiKey: null },
+    });
+  }
 }

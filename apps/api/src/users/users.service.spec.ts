@@ -17,6 +17,7 @@ const prismaMock = {
   user: {
     findUnique: jest.fn(),
     create: jest.fn(),
+    update: jest.fn(),
   },
 };
 
@@ -78,7 +79,33 @@ describe('UsersService', () => {
       });
       expect(result).toEqual(mockUser);
       expect(prismaMock.user.create).toHaveBeenCalledWith({
-        data: { email: 'test@example.com', passwordHash: 'hashed', name: 'Test User' },
+        data: {
+          email: 'test@example.com',
+          passwordHash: 'hashed',
+          name: 'Test User',
+        },
+      });
+    });
+  });
+
+  describe('saveSplitwiseApiKey', () => {
+    it('calls prisma.user.update with the provided apiKey', async () => {
+      prismaMock.user.update.mockResolvedValue(mockUser);
+      await service.saveSplitwiseApiKey('user-1', 'sw-key-abc');
+      expect(prismaMock.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: { splitwiseApiKey: 'sw-key-abc' },
+      });
+    });
+  });
+
+  describe('clearSplitwiseApiKey', () => {
+    it('calls prisma.user.update with null', async () => {
+      prismaMock.user.update.mockResolvedValue(mockUser);
+      await service.clearSplitwiseApiKey('user-1');
+      expect(prismaMock.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: { splitwiseApiKey: null },
       });
     });
   });
