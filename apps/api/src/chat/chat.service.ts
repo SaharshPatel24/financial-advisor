@@ -102,6 +102,7 @@ export class ChatService {
       userId,
       userName,
       allMessages,
+      user.splitwiseApiKey ?? null,
     )) {
       if (event.type === 'token') assistantText += event.data.content;
       yield event;

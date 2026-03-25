@@ -4,6 +4,10 @@ import { SystemMessage } from '@langchain/core/messages';
 import type { BaseMessage } from '@langchain/core/messages';
 import { AiService } from '../ai/ai.service';
 import { ChatToolsService, buildTools } from './chat-tools.service';
+import {
+  SplitwiseToolsService,
+  buildSplitwiseTools,
+} from '../splitwise/splitwise-tools.service';
 import type { ChatStreamEvent } from '@financial-advisor/shared';
 
 const HISTORY_WINDOW = 20;
@@ -13,20 +17,34 @@ export class ChatAgentService {
   constructor(
     private readonly ai: AiService,
     private readonly toolsService: ChatToolsService,
+    private readonly splitwiseToolsService: SplitwiseToolsService,
   ) {}
 
   async *stream(
     userId: string,
     userName: string,
     messages: BaseMessage[],
+    splitwiseApiKey: string | null,
   ): AsyncGenerator<ChatStreamEvent> {
     const tools = buildTools(this.toolsService, userId);
+
+    if (splitwiseApiKey) {
+      tools.push(
+        ...buildSplitwiseTools(
+          this.splitwiseToolsService as any,
+          splitwiseApiKey,
+        ),
+      );
+    }
+
     const model = this.ai.getModel();
 
     const agent = createReactAgent({
       llm: model,
       tools,
-      stateModifier: new SystemMessage(buildSystemPrompt(userName)),
+      stateModifier: new SystemMessage(
+        buildSystemPrompt(userName, !!splitwiseApiKey),
+      ),
     });
 
     const windowed = messages.slice(-HISTORY_WINDOW);
@@ -69,12 +87,15 @@ export class ChatAgentService {
 // Module-private helpers
 // ---------------------------------------------------------------------------
 
-function buildSystemPrompt(userName: string): string {
+function buildSystemPrompt(userName: string, hasSplitwise: boolean): string {
   const today = new Date().toISOString().split('T')[0];
+  const splitwiseLine = hasSplitwise
+    ? `\nYou also have access to ${userName}'s Splitwise account via tools. For create_splitwise_expense, always confirm split details with the user before calling the tool.`
+    : '';
   return `You are Fina, a personal finance assistant. Today is ${today}.
 You have access to ${userName}'s real financial data via tools — always use tools to answer questions, never guess numbers.
 Be concise, specific, and cite actual amounts from the data.
-Never reveal raw IDs or internal fields. If data is unavailable, say so honestly.`;
+Never reveal raw IDs or internal fields. If data is unavailable, say so honestly.${splitwiseLine}`;
 }
 
 function extractToolOutput(output: unknown): unknown {
